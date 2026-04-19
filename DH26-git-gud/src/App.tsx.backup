@@ -4,7 +4,6 @@ import Home from './pages/Home/Home';
 import Game from './pages/Game/Game';
 import About from './pages/About/About';
 import DataPresentation from './pages/DataPresentation/DataPresentation';
-import Dashboard from './pages/Dashboard/Dashboard';
 import './App.css';
 
 function App() {
@@ -17,7 +16,6 @@ function App() {
           <Route path="/game" element={<Game />} />
           <Route path="/data" element={<DataPresentation />} />
           <Route path="/about" element={<About />} />
-          <Route path="/dashboard" element={<Dashboard />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
