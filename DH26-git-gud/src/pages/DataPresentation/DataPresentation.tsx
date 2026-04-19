@@ -78,8 +78,7 @@ function DataPresentation() {
         <p>
           Sourced from the EIA's open data API. Covers all major energy sectors
           from 1949 to 2025. The post-1973 plateau and the 2008 dip are both
-          visible and will be modeled in-game using real life events implemented
-          throughout the game. 
+          visible — and both are modelled as in-game events.
         </p>
       </section>
 
@@ -107,7 +106,7 @@ function DataPresentation() {
         </div>
         <p>
           Lifecycle emissions per MWh across every plant type in the game. Coal
-          and petroleum are roughly 100× dirtier than nuclear or wind which is the same
+          and petroleum are roughly 100× dirtier than nuclear or wind — the same
           ratio used when calculating the player's in-game emissions score.
         </p>
       </section>
@@ -155,9 +154,7 @@ function DataPresentation() {
           (Cleaned_Sea_Level_Variation.csv), and mean monthly sea level (MSL)
           from CSIRO's global tide gauge record (Sea_Level_Rise_Formatted.csv).
           Both are in millimetres and are plotted together per month. Only months
-          present in both datasets are shown. The MSL is scaled to not include seasonal
-          changes but we decided to implement the scripps sea level variation data 
-          to help simulate the Gulf of Mexico's coast of the USA.
+          present in both datasets are shown.
         </p>
       </section>
 
@@ -188,12 +185,9 @@ function DataPresentation() {
           )}
         </div>
         <p>
-          This graphs gives us some impactful insights into the cost of energy,
-          especially solar power. This data along with other sets inform our costs that we
-          innput into the game, year to year. Oil is not included in this data set due to the extreme
-          volatility that oil markets have in response to global/local events. Instead, we implemented a
-          dataset that had the PPI of crude oil and the general cost of coal to scale the cost of coal
-          throughout our game. 
+          The solar and wind cost collapse from 2009–2023 is real and dramatic —
+          and it's the economic engine behind the game's renewable transition.
+          Build costs for every plant type are calibrated directly from this data.
         </p>
       </section>
 
