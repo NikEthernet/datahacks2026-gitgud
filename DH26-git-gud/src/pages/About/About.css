@@ -1,0 +1,128 @@
+.about {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.about-hero {
+  text-align: center;
+  padding: 3rem 2rem;
+  margin-bottom: 3rem;
+}
+
+.about-hero h1 {
+  font-size: 2.5rem;
+  color: #0d1b2a;
+  margin-bottom: 1rem;
+}
+
+.about-subtitle {
+  font-size: 1.15rem;
+  color: #415a77;
+  max-width: 700px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+/* ============ TEAM GRID ============ */
+.team-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 2rem;
+  padding: 0 1rem;
+  margin-bottom: 4rem;
+}
+
+.team-card {
+  background-color: #ffffff;
+  border: 1px solid #e0e1dd;
+  border-radius: 8px;
+  padding: 2rem 1.5rem;
+  text-align: center;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.team-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(13, 27, 42, 0.1);
+}
+
+.team-photo-wrapper {
+  width: 140px;
+  height: 140px;
+  margin: 0 auto 1.25rem;
+  border-radius: 50%;
+  overflow: hidden;
+  background-color: #e0e1dd;
+  border: 3px solid #415a77;
+}
+
+.team-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.team-name {
+  font-size: 1.35rem;
+  color: #0d1b2a;
+  margin: 0 0 1rem;
+}
+
+.team-details {
+  text-align: left;
+  margin-bottom: 1rem;
+}
+
+.team-detail {
+  font-size: 0.9rem;
+  color: #415a77;
+  margin: 0.25rem 0;
+}
+
+.team-detail strong {
+  color: #0d1b2a;
+}
+
+.team-bio {
+  font-size: 0.9rem;
+  color: #415a77;
+  line-height: 1.5;
+  margin: 0 0 1.25rem;
+}
+
+.team-socials {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.social-icon {
+  color: #415a77;
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.social-icon:hover {
+  color: #f9a03f;
+  transform: translateY(-2px);
+}
+
+/* ============ ABOUT PROJECT ============ */
+.about-project {
+  background-color: #e0e1dd;
+  padding: 3rem 2rem;
+  border-radius: 8px;
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.about-project h2 {
+  color: #0d1b2a;
+  margin-bottom: 1rem;
+}
+
+.about-project p {
+  color: #415a77;
+  line-height: 1.7;
+  max-width: 800px;
+  margin: 0 auto;
+}
