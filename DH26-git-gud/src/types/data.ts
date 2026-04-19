@@ -108,9 +108,8 @@ export interface SolarConsumptionRow {
  * Only years present in BOTH datasets are included.
  */
 export interface SeaLevelRow {
-  year: number;
-  totalSSH: number;      // sum of ssh across all rows for that year (meters)
-  meanMSL: number;       // average Monthly_MSL across that year (mm)
+  month: string;       // "YYYY-MM"
+  combinedSealevel: number;
 }
 
 // ============================================================

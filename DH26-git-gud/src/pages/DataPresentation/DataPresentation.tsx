@@ -19,7 +19,13 @@ function DataPresentation() {
     loadTotalEnergyConsumption().then(d => setEnergyData(d.data));
     loadCO2EmissionsBySource().then(d => setCo2Data(d.data));
     loadLCOETrends().then(d => setLcoeData(d.data));
-    loadSeaLevel().then(d => setSeaData(d.data));
+    loadSeaLevel()
+      .then(d => {
+        console.log('Total rows:', d.rowCount);
+        console.log('First 3 rows:', d.data.slice(0, 3));
+        setSeaData(d.data);
+      })
+      .catch(err => console.error('loadSeaLevel failed:', err));
   }, []);
 
   return (
@@ -43,7 +49,7 @@ function DataPresentation() {
         </p>
       </section>
 
-      {/* ── Dataset 1: Energy Consumption ── */}
+      {/* ── Dataset 1: U.S. Energy Consumption ── */}
       <section className="dp-section">
         <h2>Dataset 1: U.S. Energy Consumption (EIA)</h2>
         <div className="dp-chart">
@@ -105,7 +111,7 @@ function DataPresentation() {
         </p>
       </section>
 
-      {/* ── Dataset 3: Sea Level ── */}
+      {/* ── Dataset 3: Sea Level (Cleaned_Sea_Level_Variation.csv + Sea_Level_Rise_Formatted.csv) ── */}
       <section className="dp-section">
         <h2>Dataset 3: Sea-Level Change (Scripps + CSIRO)</h2>
         <div className="dp-chart">
@@ -113,55 +119,46 @@ function DataPresentation() {
             <p className="dp-placeholder">Loading sea-level data…</p>
           ) : (
             <ResponsiveContainer width="100%" height={320}>
-              <LineChart data={seaData}>
+              <LineChart data={seaData} margin={{ top: 10, right: 30, left: 20, bottom: 10 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e0e1dd" />
-                <XAxis dataKey="year" tick={{ fontSize: 12 }} />
-                <YAxis
-                  yAxisId="left"
-                  tick={{ fontSize: 12 }}
-                  label={{ value: 'Total SSH (m)', angle: -90, position: 'insideLeft', fontSize: 11 }}
+                <XAxis
+                  dataKey="month"
+                  tick={{ fontSize: 11 }}
+                  interval={23}
+                  angle={-45}
+                  textAnchor="end"
+                  height={50}
                 />
                 <YAxis
-                  yAxisId="right"
-                  orientation="right"
                   tick={{ fontSize: 12 }}
-                  label={{ value: 'Mean MSL (mm)', angle: 90, position: 'insideRight', fontSize: 11 }}
+                  label={{ value: 'Sea Level (mm)', angle: -90, position: 'insideLeft', fontSize: 11 }}
                 />
                 <Tooltip />
                 <Legend />
                 <Line
-                  yAxisId="left"
                   type="monotone"
-                  dataKey="totalSSH"
-                  name="Total SSH (m)"
-                  stroke="#0d1b2a"
-                  dot={false}
-                  strokeWidth={2}
-                />
-                <Line
-                  yAxisId="right"
-                  type="monotone"
-                  dataKey="meanMSL"
-                  name="Mean MSL (mm)"
+                  dataKey="combinedSealevel"
+                  name="Mean Sea Level (mm)"
                   stroke="#f9a03f"
                   dot={false}
                   strokeWidth={2}
+                  isAnimationActive={false}
                 />
               </LineChart>
             </ResponsiveContainer>
           )}
         </div>
         <p>
-          Derived by combining two datasets: summed sea surface height (SSH) anomalies
-          across all sampled lat/lon points from Scripps Oceanography's Gulf of Mexico
-          measurements, and mean monthly sea level (MSL) from CSIRO's global tide gauge
-          record. Only years present in both datasets are shown. Rising SSH and MSL
-          together confirm the long-term trend that the game's end-state scoring is
-          measured against.
+          Derived by combining two datasets: sea surface height (SSH) anomalies
+          from Scripps Oceanography's Gulf of Mexico measurements
+          (Cleaned_Sea_Level_Variation.csv), and mean monthly sea level (MSL)
+          from CSIRO's global tide gauge record (Sea_Level_Rise_Formatted.csv).
+          Both are in millimetres and are plotted together per month. Only months
+          present in both datasets are shown.
         </p>
       </section>
 
-      {/* ── Dataset 4: LCOE Trends ── */}
+      {/* ── Dataset 4: LCOE Trends (Energy Technology LCOE Trends.csv) ── */}
       <section className="dp-section">
         <h2>Dataset 4: Energy Technology Cost Trends (LCOE)</h2>
         <div className="dp-chart">

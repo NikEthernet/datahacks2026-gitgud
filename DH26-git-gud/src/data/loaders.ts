@@ -347,62 +347,51 @@ export async function loadLCOETrends(): Promise<LoadedDataset<LCOETrendRow>> {
 //SEA LEVEL 
 export async function loadSeaLevel(): Promise<LoadedDataset<SeaLevelRow>> {
   const [csvA, csvB] = await Promise.all([
-    fetchCSV('Cleaned_Sea_Level_Variation.csv'),
-    fetchCSV('Sea_Level_Rise_Formatted.csv'),
+    fetch('/data/Cleaned_Sea_Level_Variation.csv').then(r => r.text()),
+    fetch('/data/Sea_Level_Rise_Formatted.csv').then(r => r.text()),
   ]);
 
-  // --- Sum ssh per year from Cleaned_Sea_Level_Variation.csv ---
-  // "Month" column format: "1993-01"
-  const sshByYear = new Map<number, number>();
+  const sshByMonth = new Map<string, number>();
+  const mslByMonth = new Map<string, number>();
 
-  await new Promise<void>((resolve, reject) => {
-    Papa.parse<Record<string, string>>(csvA, {
-      header: true,
-      skipEmptyLines: true,
-      complete: (results) => {
-        for (const r of results.data) {
-          const year = parseInt((r['Month'] ?? '').slice(0, 4), 10);
-          const ssh = parseFloat(r['ssh']);
-          if (isNaN(year) || isNaN(ssh)) continue;
-          sshByYear.set(year, (sshByYear.get(year) ?? 0) + ssh);
-        }
-        resolve();
-      },
-      error: reject,
-    });
+  // Parse SSH - Month column format: "2010-01"
+  const parsedA = Papa.parse<Record<string, string>>(csvA, {
+    header: true,
+    skipEmptyLines: true,
   });
-
-  // --- Average Monthly_MSL per year from Sea_Level_Rise_Formatted.csv ---
-  // "Date" column format: "1993.0417" (decimal year)
-  const mslByYear = new Map<number, number[]>();
-
-  await new Promise<void>((resolve, reject) => {
-    Papa.parse<Record<string, string>>(csvB, {
-      header: true,
-      skipEmptyLines: true,
-      complete: (results) => {
-        for (const r of results.data) {
-          const year = parseInt((r['Date'] ?? '').split('.')[0], 10);
-          const msl = parseFloat(r['Monthly_MSL']);
-          if (isNaN(year) || isNaN(msl)) continue;
-          if (!mslByYear.has(year)) mslByYear.set(year, []);
-          mslByYear.get(year)!.push(msl);
-        }
-        resolve();
-      },
-      error: reject,
-    });
-  });
-
-  // --- Merge on year — only keep years present in BOTH datasets ---
-  const rows: SeaLevelRow[] = [];
-  for (const [year, totalSSH] of sshByYear.entries()) {
-    const mslValues = mslByYear.get(year);
-    if (!mslValues || mslValues.length === 0) continue;
-    const meanMSL = mslValues.reduce((a, b) => a + b, 0) / mslValues.length;
-    rows.push({ year, totalSSH, meanMSL });
+  for (const r of parsedA.data) {
+    const month = (r['Month'] ?? '').trim().slice(0, 7); // "2010-01"
+    const ssh = parseFloat(r['ssh']);
+    if (!month || isNaN(ssh)) continue;
+    sshByMonth.set(month, (sshByMonth.get(month) ?? 0) + ssh);
   }
-  rows.sort((a, b) => a.year - b.year);
+
+  // Parse MSL - Date column format: "1924-11"
+  const parsedB = Papa.parse<Record<string, string>>(csvB, {
+    header: true,
+    skipEmptyLines: true,
+  });
+  for (const r of parsedB.data) {
+    const month = (r['Date'] ?? '').trim().slice(0, 7); // "1924-11"
+    const msl = parseFloat(r['Monthly_MSL']);
+    if (!month || isNaN(msl)) continue;
+    mslByMonth.set(month, msl);
+  }
+
+  console.log('SSH months sample:', Array.from(sshByMonth.keys()).slice(0, 5));
+  console.log('MSL months sample:', Array.from(mslByMonth.keys()).slice(0, 5));
+
+  // Merge on YYYY-MM - only months present in BOTH datasets
+  const rows: SeaLevelRow[] = [];
+  for (const [month, totalSSH] of sshByMonth.entries()) {
+    const msl = mslByMonth.get(month);
+    if (msl === undefined) continue;
+    rows.push({
+      month,
+      combinedSealevel: totalSSH + msl,
+    });
+  }
+  rows.sort((a, b) => a.month.localeCompare(b.month));
 
   return {
     data: rows,
