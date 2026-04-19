@@ -7,6 +7,7 @@ import type {
 import { createInitialState } from '../game/state';
 import {
   tick,
+  tickN,
   buildPlant as engineBuildPlant,
   buyResource as engineBuyResource,
   demolishPlant as engineDemolishPlant,
@@ -25,6 +26,7 @@ export interface UseGameStateResult {
     buyResource: (resource: ResourceType, quantity: number) => boolean;
     demolishPlant: (plantId: string) => boolean;
     setTickSpeed: (secondsPerTick: number) => void;
+    skipMonths: (count: number) => void;   // ← add this
   };
 }
 
@@ -42,6 +44,15 @@ export function useGameState(): UseGameStateResult {
       const result = tick(current);
       setLog((prevLog) => [...prevLog.slice(-50), ...result.log]);
       return result.state;
+    });
+  }, []);
+
+  const skipMonths = useCallback((count: number) => {
+    setState((current) => {
+      const result = tickN(current, count);
+      setLog((prevLog) => [...prevLog.slice(-50), ...result.log]);
+      // Preserve paused state — skipping shouldn't auto-unpause
+      return { ...result.state, isPaused: current.isPaused };
     });
   }, []);
 
@@ -140,6 +151,7 @@ export function useGameState(): UseGameStateResult {
       buyResource,
       demolishPlant,
       setTickSpeed,
+      skipMonths
     },
   };
 }

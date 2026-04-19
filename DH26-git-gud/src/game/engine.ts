@@ -100,6 +100,20 @@ export function tick(state: GameState): TickResult {
   return { state: newState, log };
 }
 
+export function tickN(state: GameState, count: number): TickResult {
+  let current = state;
+  const allLogs: TickLogEntry[] = [];
+
+  for (let i = 0; i < count; i++) {
+    if (current.isGameOver) break;
+    const result = tick(current);
+    current = result.state;
+    allLogs.push(...result.log);
+  }
+
+  return { state: current, log: allLogs };
+}
+
 // ============================================================
 // PRODUCTION & MAINTENANCE
 // ============================================================
