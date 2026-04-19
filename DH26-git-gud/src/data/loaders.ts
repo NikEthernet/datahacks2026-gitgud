@@ -1,44 +1,30 @@
 import Papa from 'papaparse';
 import type {
-  EnergyConsumptionRow,
-  EnergyProductionRow,
-  CO2EmissionsRow,
-  SeaLevelRow,
-  SeaSurfaceTempRow,
-  OceanPHRow,
-  CalCOFIBottleRow,
+  GenerationMixRow,
+  TotalEnergyConsumptionRow,
+  SolarLCOERow,
+  PPIRow,
+  SolarConsumptionRow,
+  SSHRow,
+  CO2EmissionsBySourceRow,
+  LCOETrendRow,
   LoadedDataset,
 } from '../types/data';
 
+// ============================================================
+// BASE FETCHER — just grabs raw CSV text
+// ============================================================
+
 /**
- * Base fetcher — grabs a CSV from /public/data/ and parses it.
- * Uses papaparse's header-based parsing with automatic type coercion.
+ * Fetches raw CSV text from public/data/.
+ * Each loader parses the text itself using whatever logic it needs.
  */
-async function fetchAndParseCSV<T>(fileName: string): Promise<T[]> {
+async function fetchCSV(fileName: string): Promise<string> {
   const response = await fetch(`/data/${fileName}`);
-
   if (!response.ok) {
-    throw new Error(
-      `Failed to fetch ${fileName}: ${response.status} ${response.statusText}`
-    );
+    throw new Error(`Failed to fetch ${fileName}: ${response.status}`);
   }
-
-  const text = await response.text();
-
-  return new Promise((resolve, reject) => {
-    Papa.parse<T>(text, {
-      header: true,
-      dynamicTyping: true,
-      skipEmptyLines: true,
-      complete: (results) => {
-        if (results.errors.length > 0) {
-          console.warn(`Parse warnings for ${fileName}:`, results.errors);
-        }
-        resolve(results.data);
-      },
-      error: (err: Error) => reject(err),
-    });
-  });
+  return response.text();
 }
 
 /**
@@ -54,65 +40,346 @@ function wrapDataset<T>(data: T[], fileName: string): LoadedDataset<T> {
 }
 
 // ============================================================
-// ENERGY DATASET LOADERS
+// GENERATION MIX LOADER (Jan-01 date format)
 // ============================================================
 
-export async function loadEnergyConsumption(): Promise<LoadedDataset<EnergyConsumptionRow>> {
-  const data = await fetchAndParseCSV<EnergyConsumptionRow>('energy_consumption.csv');
-  return wrapDataset(data, 'energy_consumption.csv');
+function parseShortDate(shortDate: string): { year: number; month: number } | null {
+  const match = /^([A-Za-z]{3})-(\d{2})$/.exec(shortDate.trim());
+  if (!match) return null;
+
+  const monthMap: Record<string, number> = {
+    Jan: 1, Feb: 2, Mar: 3, Apr: 4, May: 5, Jun: 6,
+    Jul: 7, Aug: 8, Sep: 9, Oct: 10, Nov: 11, Dec: 12,
+  };
+  const month = monthMap[match[1]];
+  if (!month) return null;
+
+  const yearSuffix = parseInt(match[2], 10);
+  const year = 2000 + yearSuffix;
+  return { year, month };
 }
 
-export async function loadEnergyProduction(): Promise<LoadedDataset<EnergyProductionRow>> {
-  const data = await fetchAndParseCSV<EnergyProductionRow>('energy_production.csv');
-  return wrapDataset(data, 'energy_production.csv');
-}
+export async function loadGenerationMix(): Promise<LoadedDataset<GenerationMixRow>> {
+  const text = await fetchCSV('Generation_Energy_Percentages_Fixed (1).csv');
 
-export async function loadCO2Emissions(): Promise<LoadedDataset<CO2EmissionsRow>> {
-  const data = await fetchAndParseCSV<CO2EmissionsRow>('co2_emissions.csv');
-  return wrapDataset(data, 'co2_emissions.csv');
+  return new Promise((resolve, reject) => {
+    Papa.parse<Record<string, string>>(text, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (results) => {
+        const rows: GenerationMixRow[] = [];
+        for (const row of results.data) {
+          const dateStr = row[''];
+          if (!dateStr) continue;
+
+          const parsed = parseShortDate(dateStr);
+          if (!parsed) continue;
+
+          rows.push({
+            year: parsed.year,
+            month: parsed.month,
+            all: parseFloat(row['All']) || 0,
+            coal: parseFloat(row['Coal']) || 0,
+            petroleumLiquids: parseFloat(row['Petroleum Liquids']) || 0,
+            petroleumCoke: parseFloat(row['Petroleum Coke']) || 0,
+            naturalGas: parseFloat(row['Natural Gas']) || 0,
+            otherGases: parseFloat(row['Other Gasses']) || 0,
+            nuclear: parseFloat(row['Nuclear']) || 0,
+            hydroelectric: parseFloat(row['Hydroelectric']) || 0,
+            otherRenewables: parseFloat(row['Other Renewables']) || 0,
+            hydroelectricStorage: parseFloat(row['Hydro-electric storage']) || 0,
+            other: parseFloat(row['Other']) || 0,
+          });
+        }
+        resolve(wrapDataset(rows, 'Generation_Energy_Percentages_Fixed (1).csv'));
+      },
+      error: reject,
+    });
+  });
 }
 
 // ============================================================
-// OCEANIC DATASET LOADERS
+// TOTAL ENERGY CONSUMPTION LOADER
 // ============================================================
 
-export async function loadSeaLevel(): Promise<LoadedDataset<SeaLevelRow>> {
-  const data = await fetchAndParseCSV<SeaLevelRow>('sea_level.csv');
-  return wrapDataset(data, 'sea_level.csv');
+export async function loadTotalEnergyConsumption(): Promise<
+  LoadedDataset<TotalEnergyConsumptionRow>
+> {
+  const text = await fetchCSV('energy_data_total_updated.csv');
+
+  return new Promise((resolve, reject) => {
+    Papa.parse<Record<string, string>>(text, {
+      header: true,
+      dynamicTyping: true,
+      skipEmptyLines: true,
+      complete: (results) => {
+        const rows: TotalEnergyConsumptionRow[] = results.data
+          .filter((r) => r.period && r.value)
+          .map((r) => ({
+            year: Number(r.period),
+            msn: String(r.msn),
+            description: String(r.seriesDescription),
+            value: Number(r.value),
+            unit: String(r.unit),
+          }));
+        resolve(wrapDataset(rows, 'energy_data_total_updated.csv'));
+      },
+      error: reject,
+    });
+  });
 }
 
-export async function loadSeaSurfaceTemp(): Promise<LoadedDataset<SeaSurfaceTempRow>> {
-  const data = await fetchAndParseCSV<SeaSurfaceTempRow>('sea_surface_temp.csv');
-  return wrapDataset(data, 'sea_surface_temp.csv');
+// ============================================================
+// SOLAR LCOE (1990-2025 extrapolated)
+// ============================================================
+
+export async function loadSolarLCOE(): Promise<LoadedDataset<SolarLCOERow>> {
+  const text = await fetchCSV('Solar_LCOE_1990_2025_Extrapolated.csv');
+
+  return new Promise((resolve, reject) => {
+    Papa.parse<Record<string, string>>(text, {
+      header: true,
+      dynamicTyping: true,
+      skipEmptyLines: true,
+      complete: (results) => {
+        const rows: SolarLCOERow[] = results.data
+          .filter((r) => r.Year)
+          .map((r) => ({
+            year: Number(r.Year),
+            lcoePerKWh: Number(r['LCOE (2023 USD/kWh)']),
+          }));
+        resolve(wrapDataset(rows, 'Solar_LCOE_1990_2025_Extrapolated.csv'));
+      },
+      error: reject,
+    });
+  });
 }
 
-export async function loadOceanPH(): Promise<LoadedDataset<OceanPHRow>> {
-  const data = await fetchAndParseCSV<OceanPHRow>('ocean_ph.csv');
-  return wrapDataset(data, 'ocean_ph.csv');
+// ============================================================
+// PPI LOADERS (coal, gas, petroleum, industrial)
+// ============================================================
+
+async function loadPPI(
+  fileName: string,
+  nominalColumn: string,
+  indexColumn: string
+): Promise<LoadedDataset<PPIRow>> {
+  const text = await fetchCSV(fileName);
+
+  return new Promise((resolve, reject) => {
+    Papa.parse<Record<string, string>>(text, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (results) => {
+        const rows: PPIRow[] = results.data
+          .filter((r) => r.date)
+          .map((r) => ({
+            date: String(r.date),
+            year: Number(r.year),
+            month: Number(r.month),
+            decade: Number(r.decade),
+            nominal: Number(r[nominalColumn]),
+            index2024base: Number(r[indexColumn]),
+            momPct: r.mom_pct ? Number(r.mom_pct) : null,
+            yoyPct: r.yoy_pct ? Number(r.yoy_pct) : null,
+            rollingVol12m: r.rolling_vol_12m ? Number(r.rolling_vol_12m) : null,
+            shock: String(r.shock).toLowerCase() === 'true',
+            direction: (r.direction || 'flat') as 'up' | 'down' | 'flat',
+            event: r.event || null,
+          }));
+        resolve(wrapDataset(rows, fileName));
+      },
+      error: reject,
+    });
+  });
 }
 
-export async function loadCalCOFIBottle(): Promise<LoadedDataset<CalCOFIBottleRow>> {
-  const data = await fetchAndParseCSV<CalCOFIBottleRow>('calcofi_bottle.csv');
-  return wrapDataset(data, 'calcofi_bottle.csv');
+export const loadCoalPPI = () =>
+  loadPPI('coal_ppi_enriched.csv', 'coal_ppi_nominal', 'coal_index_2024base');
+
+export const loadGasPPI = () =>
+  loadPPI('gas_ppi_enriched.csv', 'gas_ppi', 'gas_index_2024base');
+
+export const loadPetroleumPPI = () =>
+  loadPPI('petroleum_ppi_enriched.csv', 'petroleum_ppi_nominal', 'petroleum_index_2024base');
+
+export const loadIndustrialPPI = () =>
+  loadPPI('industrial_power_ppi_enriched.csv', 'industrial_ppi_nominal', 'industrial_index_2024base');
+
+// ============================================================
+// SOLAR CONSUMPTION LOADER
+// ============================================================
+
+export async function loadSolarConsumption(): Promise<
+  LoadedDataset<SolarConsumptionRow>
+> {
+  const text = await fetchCSV('SolarPowerConsumption.csv');
+
+  return new Promise((resolve, reject) => {
+    Papa.parse<Record<string, string>>(text, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (results) => {
+        const rows: SolarConsumptionRow[] = [];
+        for (const r of results.data) {
+          const yyyymm = String(r.YYYYMM || '');
+          if (yyyymm.length !== 6) continue;
+
+          const year = Number(yyyymm.substring(0, 4));
+          const month = Number(yyyymm.substring(4, 6));
+
+          // Skip month 13 (annual totals in this dataset)
+          if (month < 1 || month > 12) continue;
+
+          const rawValue = String(r.Value || '');
+          const parsed = rawValue === 'Not Available' ? null : Number(rawValue);
+          const value = parsed !== null && isNaN(parsed) ? null : parsed;
+
+          rows.push({
+            msn: String(r.MSN),
+            year,
+            month,
+            value,
+            description: String(r.Description),
+            unit: String(r.Unit),
+          });
+        }
+        resolve(wrapDataset(rows, 'SolarPowerConsumption.csv'));
+      },
+      error: reject,
+    });
+  });
+}
+
+// ============================================================
+// SEA SURFACE HEIGHT LOADER
+// ============================================================
+
+export async function loadSSH(): Promise<LoadedDataset<SSHRow>> {
+  const text = await fetchCSV('Specific_Location_SSH_Real.csv');
+
+  return new Promise((resolve, reject) => {
+    Papa.parse<Record<string, string>>(text, {
+      header: true,
+      dynamicTyping: true,
+      skipEmptyLines: true,
+      complete: (results) => {
+        const rows: SSHRow[] = results.data
+          .filter((r) => r.time)
+          .map((r) => ({
+            date: String(r.time),
+            lat: Number(r.lat),
+            lon: Number(r.lon),
+            ssh: Number(r.ssh),
+          }));
+        resolve(wrapDataset(rows, 'Specific_Location_SSH_Real.csv'));
+      },
+      error: reject,
+    });
+  });
+}
+
+// ============================================================
+// CO2 EMISSIONS BY SOURCE LOADER
+// ============================================================
+
+function normalizeSourceName(raw: string): string {
+  const trimmed = raw.trim().toLowerCase();
+  if (trimmed.startsWith('coal')) return 'coal';
+  if (trimmed.startsWith('oil') || trimmed.includes('petroleum')) return 'petroleum';
+  if (trimmed.startsWith('natural gas')) return 'natural_gas';
+  if (trimmed.startsWith('solar')) return 'solar';
+  if (trimmed.startsWith('wind')) return 'wind';
+  if (trimmed.startsWith('hydro')) return 'hydro';
+  if (trimmed.startsWith('nuclear')) return 'nuclear';
+  if (trimmed.startsWith('geothermal')) return 'geothermal';
+  return trimmed;
+}
+
+function parseNumberWithCommas(raw: string): number {
+  return parseFloat(raw.replace(/,/g, ''));
+}
+
+export async function loadCO2EmissionsBySource(): Promise<
+  LoadedDataset<CO2EmissionsBySourceRow>
+> {
+  const text = await fetchCSV(
+    'Energy Source CO2 Emissions Comparison - Energy Source CO2 Emissions Comparison.csv'
+  );
+
+  return new Promise((resolve, reject) => {
+    Papa.parse<Record<string, string>>(text, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (results) => {
+        const rows: CO2EmissionsBySourceRow[] = [];
+        for (const r of results.data) {
+          const source = r['Energy Source'];
+          const emissionsRaw = r['Lifecycle Emissions (kg/MWh)'];
+          if (!source || !emissionsRaw) continue;
+
+          const kgPerMWh = parseNumberWithCommas(emissionsRaw);
+          if (isNaN(kgPerMWh)) continue;
+
+          rows.push({
+            source: normalizeSourceName(source),
+            tonsPerMWh: kgPerMWh / 1000,
+          });
+        }
+        resolve(wrapDataset(rows, 'co2_emissions_by_source.csv'));
+      },
+      error: reject,
+    });
+  });
+}
+
+// ============================================================
+// LCOE TRENDS LOADER
+// ============================================================
+
+function parseDollarValue(raw: string | undefined): number | null {
+  if (!raw) return null;
+  const cleaned = raw.replace(/[$,]/g, '').trim();
+  if (!cleaned) return null;
+  const n = parseFloat(cleaned);
+  return isNaN(n) ? null : n;
+}
+
+export async function loadLCOETrends(): Promise<LoadedDataset<LCOETrendRow>> {
+  const text = await fetchCSV(
+    'Energy Technology LCOE Trends - Energy Technology LCOE Trends.csv'
+  );
+
+  return new Promise((resolve, reject) => {
+    Papa.parse<Record<string, string>>(text, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (results) => {
+        const rows: LCOETrendRow[] = results.data
+          .filter((r) => r.Year)
+          .map((r) => ({
+            year: Number(r.Year),
+            solarPV: parseDollarValue(r['Solar PV($/MWh)']),
+            wind: parseDollarValue(r['Wind($/MWh)']),
+            naturalGas: parseDollarValue(r['Natural Gas ($/MWh)']),
+            coal: parseDollarValue(r['Coal($/MWh)']),
+            nuclear: parseDollarValue(r['Nuclear($/MWh)']),
+          }));
+        resolve(wrapDataset(rows, 'lcoe_trends.csv'));
+      },
+      error: reject,
+    });
+  });
 }
 
 // ============================================================
 // UTILITIES
 // ============================================================
 
-/**
- * Converts an annual value to a monthly rate by dividing by 12.
- * Use this when deriving per-month game values from yearly CSV data.
- */
 export function annualToMonthly(annualValue: number): number {
   return annualValue / 12;
 }
 
-/**
- * Expands an array of annual rows into monthly rows by evenly distributing
- * the annual value across 12 months. Useful when the game loop needs
- * monthly granularity but the source data is annual.
- */
 export function expandAnnualToMonthly<T extends { year: number }>(
   annualRows: T[],
   valueKey: keyof T

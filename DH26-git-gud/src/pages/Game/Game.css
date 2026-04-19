@@ -1,0 +1,616 @@
+.game-page {
+  position: relative;
+  width: 100vw;
+  min-height: calc(100vh - 73px);
+  background: linear-gradient(180deg, #7cb9e8 0%, #5a9bd4 100%);
+  overflow: hidden;
+  padding: 0;
+  margin: 0;
+  margin-left: calc(-50vw + 50%);
+  margin-right: calc(-50vw + 50%);
+}
+
+/* ============ TOP HUD ============ */
+.game-hud {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  padding: 0.85rem 2rem;
+  background-color: #0d1b2a;
+  color: #e0e1dd;
+  border-bottom: 2px solid #1b263b;
+  flex-wrap: wrap;
+}
+
+.hud-stat {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.hud-icon {
+  font-size: 1.5rem;
+}
+
+.hud-value {
+  color: #ffffff;
+}
+
+/* ============ RESOURCE TICKER ============ */
+.resource-ticker {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 0.5rem 1rem;
+  background-color: #1b263b;
+  border-bottom: 1px solid #415a77;
+  flex-wrap: wrap;
+}
+
+.resource-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.8rem;
+  background-color: #0d1b2a;
+  border-radius: 20px;
+  color: #e0e1dd;
+  font-size: 0.85rem;
+}
+
+.resource-name {
+  font-weight: 600;
+}
+
+.resource-amount {
+  color: #f9a03f;
+  font-weight: 700;
+}
+
+.resource-price {
+  color: #c9d4de;
+  font-size: 0.75rem;
+}
+
+/* ============ MAP AREA ============ */
+.game-map-area {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 2rem;
+  min-height: 60vh;
+}
+
+/* ============ CORNER BUTTONS ============ */
+.game-corner-btn {
+  position: absolute;
+  bottom: 1.5rem;
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  background-color: #1b263b;
+  color: #ffffff;
+  border: 3px solid #0d1b2a;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  font-weight: 700;
+  transition: transform 0.15s ease, background-color 0.15s ease;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+  z-index: 10;
+}
+
+.game-corner-btn:hover {
+  transform: translateY(-3px);
+  background-color: #415a77;
+}
+
+.game-corner-btn-left {
+  left: 1.5rem;
+  bottom: 1.5rem;
+}
+
+.game-corner-btn-upper {
+  bottom: 11rem !important;  /* stacks above Energy button */
+}
+
+.game-corner-btn-right {
+  right: 1.5rem;
+}
+
+.corner-btn-icon {
+  font-size: 2rem;
+}
+
+.corner-btn-label {
+  font-size: 1.1rem;
+}
+
+/* ============ TICK CONTROLS ============ */
+.tick-controls {
+  position: absolute;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 0.5rem;
+  background-color: rgba(13, 27, 42, 0.92);
+  padding: 0.6rem 0.8rem;
+  border-radius: 30px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 10;
+}
+
+.tick-btn {
+  background-color: #415a77;
+  color: #ffffff;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.tick-btn:hover:not(:disabled) {
+  background-color: #5a7a9a;
+}
+
+.tick-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.tick-btn-primary {
+  background-color: #f9a03f;
+  color: #0d1b2a;
+}
+
+.tick-btn-primary:hover:not(:disabled) {
+  background-color: #ffb459;
+}
+
+/* ============ REGION PANEL ============ */
+.region-panel {
+  position: absolute;
+  top: 140px;
+  right: 1.5rem;
+  width: 320px;
+  max-height: calc(100vh - 200px);
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 5;
+}
+
+.region-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  background-color: #0d1b2a;
+  color: #ffffff;
+}
+
+.region-panel-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.region-panel-close {
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+.region-panel-section {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid #e0e1dd;
+  overflow-y: auto;
+}
+
+.region-panel-section h3 {
+  margin: 0 0 0.75rem;
+  color: #0d1b2a;
+  font-size: 1rem;
+}
+
+.suitability-list,
+.plant-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.suitability-item,
+.plant-list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.4rem 0.6rem;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.plant-type-name {
+  color: #0d1b2a;
+}
+
+.suitability-badge {
+  padding: 0.15rem 0.5rem;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.suitability-badge.excellent {
+  background-color: #c8e6c9;
+  color: #1b5e20;
+}
+.suitability-badge.good {
+  background-color: #dcedc8;
+  color: #33691e;
+}
+.suitability-badge.ok {
+  background-color: #fff9c4;
+  color: #827717;
+}
+.suitability-badge.poor {
+  background-color: #ffcdd2;
+  color: #b71c1c;
+}
+
+.status-on {
+  color: #1b5e20;
+  font-weight: 600;
+}
+.status-building {
+  color: #f9a03f;
+  font-weight: 600;
+}
+
+.region-empty {
+  color: #6c757d;
+  font-style: italic;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.region-panel-build-btn {
+  padding: 0.9rem;
+  background-color: #f9a03f;
+  color: #0d1b2a;
+  border: none;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.region-panel-build-btn:hover {
+  background-color: #ffb459;
+}
+
+/* ============ BUILD MENU ============ */
+.build-menu {
+  color: #0d1b2a;
+}
+
+.build-intro {
+  margin: 0 0 1rem;
+  color: #415a77;
+}
+
+.build-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.build-card {
+  border: 2px solid #e0e1dd;
+  border-radius: 8px;
+  padding: 1rem;
+  background-color: #f8f9fa;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.build-card.disabled {
+  opacity: 0.5;
+}
+
+.build-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.build-card-header h4 {
+  margin: 0;
+  color: #0d1b2a;
+}
+
+.build-card-stats {
+  font-size: 0.85rem;
+  color: #415a77;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.stat-label {
+  font-weight: 600;
+  color: #0d1b2a;
+}
+
+.build-card-btn {
+  padding: 0.6rem;
+  background-color: #f9a03f;
+  color: #0d1b2a;
+  border: none;
+  border-radius: 6px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.build-card-btn:hover:not(:disabled) {
+  background-color: #ffb459;
+}
+
+.build-card-btn:disabled {
+  background-color: #c9d4de;
+  cursor: not-allowed;
+}
+
+.build-region-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.build-region-btn {
+  padding: 1rem;
+  background-color: #415a77;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.build-region-btn:hover {
+  background-color: #5a7a9a;
+}
+
+/* ============ ENERGY PANEL ============ */
+.energy-panel {
+  color: #0d1b2a;
+}
+
+.energy-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.energy-stat-card {
+  padding: 1rem;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border-left: 4px solid #f9a03f;
+}
+
+.energy-stat-label {
+  font-size: 0.85rem;
+  color: #415a77;
+  margin-bottom: 0.4rem;
+}
+
+.energy-stat-value {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #0d1b2a;
+}
+
+.stat-sub {
+  font-size: 0.75rem;
+  color: #f9a03f;
+  font-weight: 500;
+}
+
+.plant-breakdown {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.plant-breakdown li {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.6rem 0.8rem;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+}
+
+.plant-count {
+  font-weight: 700;
+  color: #f9a03f;
+}
+
+.energy-empty {
+  color: #6c757d;
+  font-style: italic;
+}
+
+/* ============ GAME LOG ============ */
+.game-log {
+  position: absolute;
+  bottom: 10rem;
+  right: 1.5rem;
+  width: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.log-entry {
+  padding: 0.6rem 0.9rem;
+  background-color: rgba(13, 27, 42, 0.9);
+  color: #ffffff;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  animation: logFadeIn 0.3s ease;
+}
+
+.log-entry.log-plant_online {
+  border-left: 3px solid #4caf50;
+}
+.log-entry.log-fuel_shortage {
+  border-left: 3px solid #f9a03f;
+}
+.log-entry.log-money_warning {
+  border-left: 3px solid #e53935;
+}
+
+@keyframes logFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* ============ RESOURCE MARKET ============ */
+.market-panel {
+  color: #0d1b2a;
+}
+
+.market-intro {
+  margin: 0 0 1.25rem;
+  color: #415a77;
+  font-size: 0.95rem;
+}
+
+.market-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.market-card {
+  padding: 1rem;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 2px solid #e0e1dd;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.market-card-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.market-card-header h4 {
+  margin: 0;
+  color: #0d1b2a;
+}
+
+.market-price {
+  color: #f9a03f;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.market-stock {
+  font-size: 0.85rem;
+  color: #415a77;
+}
+
+.market-input-row {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.market-qty-btn {
+  background-color: #415a77;
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+  padding: 0.4rem 0.6rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.market-qty-btn:hover {
+  background-color: #5a7a9a;
+}
+
+.market-qty-input {
+  flex: 1;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid #c9d4de;
+  border-radius: 4px;
+  text-align: center;
+  font-size: 0.95rem;
+  min-width: 0;
+}
+
+.market-total {
+  font-size: 0.9rem;
+  color: #415a77;
+}
+
+.market-buy-btn {
+  padding: 0.6rem;
+  background-color: #f9a03f;
+  color: #0d1b2a;
+  border: none;
+  border-radius: 6px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.market-buy-btn:hover:not(:disabled) {
+  background-color: #ffb459;
+}
+
+.market-buy-btn:disabled {
+  background-color: #c9d4de;
+  cursor: not-allowed;
+}
