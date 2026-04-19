@@ -1,0 +1,158 @@
+import { useState, useEffect, useMemo, useRef } from 'react';
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip, Legend,
+  ResponsiveContainer, CartesianGrid,
+} from 'recharts';
+import { useGame } from '../../context/GameContext';
+import { getPlantDefinition } from '../../game/plants';
+import {
+  loadHistorical,
+  getHistoricalForYear,
+  type EnergyMix,
+  type HistoricalRow,
+} from '../dashboard/historicalLoader';
+import type { PlantType } from '../../types/game';
+import './Compare.css';
+
+// Maps the game's plant types to the EnergyMix categories used in the chart.
+const PLANT_TYPE_TO_CATEGORY: Record<PlantType, keyof EnergyMix> = {
+  coal: 'coal',
+  natural_gas: 'naturalGas',
+  petroleum: 'petroleum',
+  nuclear: 'nuclear',
+  hydro: 'hydro',
+  solar: 'renewables',
+  wind: 'renewables',
+
+
+};
+
+const LABELS: Record<keyof EnergyMix, string> = {
+  coal: 'Coal',
+  naturalGas: 'Natural Gas',
+  petroleum: 'Petroleum',
+  nuclear: 'Nuclear',
+  hydro: 'Hydro',
+  renewables: 'Renewables',
+  other: 'Other',
+};
+
+const EMPTY_MIX: EnergyMix = {
+  coal: 0, naturalGas: 0, petroleum: 0, nuclear: 0,
+  hydro: 0, renewables: 0, other: 0,
+};
+
+export default function Compare() {
+  const { state } = useGame();
+  const [open, setOpen] = useState(false);
+  const [historical, setHistorical] = useState<HistoricalRow[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // Load historical data once on mount.
+  useEffect(() => {
+    loadHistorical()
+      .then(setHistorical)
+      .catch((err) => {
+        console.error('Failed to load historical data:', err);
+        setLoadError('Could not load historical data');
+      });
+  }, []);
+
+  // Close the panel when clicking outside.
+  useEffect(() => {
+    if (!open) return;
+    const onMouseDown = (e: MouseEvent) => {
+      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onMouseDown);
+    return () => document.removeEventListener('mousedown', onMouseDown);
+  }, [open]);
+
+  // Compute the player's current energy mix from operational plants.
+  const userMix: EnergyMix = useMemo(() => {
+    const mix: EnergyMix = { ...EMPTY_MIX };
+    const operational = state.plants.filter((p) => p.operational);
+    if (operational.length === 0) return mix;
+
+    let total = 0;
+    const rawByCategory: Record<keyof EnergyMix, number> = { ...EMPTY_MIX };
+
+    for (const plant of operational) {
+      const def = getPlantDefinition(plant.type, state.currentYear);
+      const energy = def?.energyPerMonth ?? 0;
+      const category = PLANT_TYPE_TO_CATEGORY[plant.type] ?? 'other';
+      rawByCategory[category] += energy;
+      total += energy;
+    }
+
+    if (total === 0) return mix;
+
+    for (const key of Object.keys(rawByCategory) as (keyof EnergyMix)[]) {
+      mix[key] = (rawByCategory[key] / total) * 100;
+    }
+    return mix;
+  }, [state.plants, state.currentYear]);
+
+  const historicalMix = getHistoricalForYear(historical, state.currentYear) ?? EMPTY_MIX;
+  const hasUserData = state.plants.some((p) => p.operational);
+  const hasHistorical = !!getHistoricalForYear(historical, state.currentYear);
+
+  const chartData = (Object.keys(LABELS) as (keyof EnergyMix)[]).map((k) => ({
+    source: LABELS[k],
+    Your: Number(userMix[k].toFixed(2)),
+    Historical: Number(historicalMix[k].toFixed(2)),
+  }));
+
+  return (
+    <div className="compare-container" ref={panelRef}>
+      <button
+        className="compare-toggle"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+      >
+        📊 Compare ▾
+      </button>
+
+      {open && (
+        <div className="compare-panel">
+          <div className="compare-header">
+            <h3>Your mix vs. {state.currentYear} historical</h3>
+            {!hasHistorical && (
+              <p className="compare-note">
+                No historical data for {state.currentYear}.
+              </p>
+            )}
+            {!hasUserData && (
+              <p className="compare-note">
+                Build operational plants to see your mix appear.
+              </p>
+            )}
+            {loadError && <p className="compare-error">{loadError}</p>}
+          </div>
+          <div className="compare-chart-wrap">
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                <XAxis dataKey="source" stroke="#d1d5db" fontSize={12} />
+                <YAxis stroke="#d1d5db" fontSize={12} unit="%" />
+                <Tooltip
+                  contentStyle={{
+                    background: '#1f2937',
+                    border: '1px solid #374151',
+                    color: '#e5e7eb',
+                  }}
+                />
+                <Legend />
+                <Bar dataKey="Your" fill="#4ade80" />
+                <Bar dataKey="Historical" fill="#60a5fa" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

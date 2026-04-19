@@ -1,0 +1,35 @@
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import Navbar from './components/layout/Navbar';
+import Home from './pages/Home/Home';
+import Game from './pages/Game/Game';
+import About from './pages/About/About';
+import DataPresentation from './pages/DataPresentation/DataPresentation';
+import './App.css';
+
+function App() {
+  return (
+    <BrowserRouter>
+      <Navbar />
+      <main className="app-main">
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/game" element={<Game />} />
+          <Route path="/data" element={<DataPresentation />} />
+          <Route path="/about" element={<About />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </main>
+    </BrowserRouter>
+  );
+}
+
+function NotFound() {
+  return (
+    <div className="page">
+      <h1>404</h1>
+      <p>This page doesn't exist. Did you take a wrong turn at 1973?</p>
+    </div>
+  );
+}
+
+export default App;

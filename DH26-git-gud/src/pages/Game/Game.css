@@ -1,13 +1,44 @@
 .game-page {
   position: relative;
   width: 100vw;
-  min-height: calc(100vh - 73px);
-  background: linear-gradient(180deg, #7cb9e8 0%, #5a9bd4 100%);
+  min-height: 100vh;
+  background: linear-gradient(180deg, #1a4971 0%, #2d5f8f 50%, #4a7fb0 100%);
   overflow: hidden;
   padding: 0;
   margin: 0;
   margin-left: calc(-50vw + 50%);
   margin-right: calc(-50vw + 50%);
+  margin-top: -2rem;
+  margin-bottom: -2rem;
+}
+
+/* Wave texture overlay — SVG pattern, animated */
+.game-page::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='20' viewBox='0 0 100 20'%3E%3Cpath d='M0 10 Q 25 0 50 10 T 100 10' stroke='rgba(255,255,255,0.08)' stroke-width='1.5' fill='none'/%3E%3Cpath d='M0 15 Q 25 5 50 15 T 100 15' stroke='rgba(255,255,255,0.05)' stroke-width='1' fill='none'/%3E%3C/svg%3E");
+  background-size: 100px 20px;
+  pointer-events: none;
+  z-index: 0;
+  animation: waveMove 30s linear infinite;
+}
+
+@keyframes waveMove {
+  from { background-position: 0 0; }
+  to { background-position: 200px 0; }
+}
+
+/* Keep all game content above the wave layer */
+.game-hud,
+.resource-ticker,
+.game-map-area,
+.game-button-stack,
+.tick-controls,
+.region-panel,
+.notifications-container {
+  position: relative;
+  z-index: 1;
 }
 
 /* ============ TOP HUD ============ */
@@ -21,6 +52,7 @@
   color: #e0e1dd;
   border-bottom: 2px solid #1b263b;
   flex-wrap: wrap;
+  z-index: 2;
 }
 
 .hud-stat {
@@ -48,6 +80,7 @@
   background-color: #1b263b;
   border-bottom: 1px solid #415a77;
   flex-wrap: wrap;
+  z-index: 2;
 }
 
 .resource-chip {
@@ -84,12 +117,21 @@
   min-height: 60vh;
 }
 
-/* ============ CORNER BUTTONS ============ */
-.game-corner-btn {
+/* ============ RIGHT-SIDE BUTTON STACK ============ */
+.game-button-stack {
   position: absolute;
-  bottom: 1.5rem;
-  width: 130px;
-  height: 130px;
+  right: 1.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  z-index: 10;
+}
+
+.game-stack-btn {
+  width: 110px;
+  height: 110px;
   border-radius: 50%;
   background-color: #1b263b;
   color: #ffffff;
@@ -99,44 +141,35 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.25rem;
+  gap: 0.2rem;
   font-weight: 700;
   transition: transform 0.15s ease, background-color 0.15s ease;
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
-  z-index: 10;
 }
 
-.game-corner-btn:hover {
-  transform: translateY(-3px);
+.game-stack-btn:hover:not(:disabled) {
+  transform: translateX(-4px);
   background-color: #415a77;
 }
 
-.game-corner-btn-left {
-  left: 1.5rem;
-  bottom: 1.5rem;
+.game-stack-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
-.game-corner-btn-upper {
-  bottom: 11rem !important;  /* stacks above Energy button */
+.stack-btn-icon {
+  font-size: 1.75rem;
 }
 
-.game-corner-btn-right {
-  right: 1.5rem;
-}
-
-.corner-btn-icon {
-  font-size: 2rem;
-}
-
-.corner-btn-label {
-  font-size: 1.1rem;
+.stack-btn-label {
+  font-size: 0.95rem;
 }
 
 /* ============ TICK CONTROLS ============ */
 .tick-controls {
   position: absolute;
   bottom: 2rem;
-  left: 50%;
+  left: calc(50% - 70px);
   transform: translateX(-50%);
   display: flex;
   gap: 0.5rem;
@@ -177,11 +210,11 @@
   background-color: #ffb459;
 }
 
-/* ============ REGION PANEL ============ */
+/* ============ REGION PANEL (left side) ============ */
 .region-panel {
   position: absolute;
   top: 140px;
-  right: 1.5rem;
+  left: 1.5rem;
   width: 320px;
   max-height: calc(100vh - 200px);
   background-color: #ffffff;
@@ -190,7 +223,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  z-index: 5;
+  z-index: 15;
 }
 
 .region-panel-header {
@@ -305,6 +338,62 @@
 
 .region-panel-build-btn:hover {
   background-color: #ffb459;
+}
+
+/* ============ NOTIFICATIONS (top-right stack, fade) ============ */
+.notifications-container {
+  position: absolute;
+  top: 140px;
+  right: 11rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: 320px;
+  z-index: 20;
+  pointer-events: none;
+}
+
+.notification {
+  padding: 0.8rem 1rem;
+  background-color: rgba(13, 27, 42, 0.92);
+  color: #ffffff;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  animation: notifSlideIn 0.3s ease, notifFadeOut 0.5s ease 4.5s forwards;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+.notification-plant_online {
+  border-left: 4px solid #4caf50;
+}
+.notification-fuel_shortage {
+  border-left: 4px solid #f9a03f;
+}
+.notification-money_warning {
+  border-left: 4px solid #e53935;
+}
+.notification-plant_decommissioned {
+  border-left: 4px solid #9e9e9e;
+}
+.notification-info {
+  border-left: 4px solid #7cb9e8;
+}
+
+@keyframes notifSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes notifFadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; transform: translateX(10px); }
 }
 
 /* ============ BUILD MENU ============ */
@@ -465,49 +554,6 @@
 .energy-empty {
   color: #6c757d;
   font-style: italic;
-}
-
-/* ============ GAME LOG ============ */
-.game-log {
-  position: absolute;
-  bottom: 10rem;
-  right: 1.5rem;
-  width: 280px;
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-  z-index: 5;
-  pointer-events: none;
-}
-
-.log-entry {
-  padding: 0.6rem 0.9rem;
-  background-color: rgba(13, 27, 42, 0.9);
-  color: #ffffff;
-  border-radius: 6px;
-  font-size: 0.85rem;
-  animation: logFadeIn 0.3s ease;
-}
-
-.log-entry.log-plant_online {
-  border-left: 3px solid #4caf50;
-}
-.log-entry.log-fuel_shortage {
-  border-left: 3px solid #f9a03f;
-}
-.log-entry.log-money_warning {
-  border-left: 3px solid #e53935;
-}
-
-@keyframes logFadeIn {
-  from {
-    opacity: 0;
-    transform: translateX(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
 }
 
 /* ============ RESOURCE MARKET ============ */
