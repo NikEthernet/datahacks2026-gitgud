@@ -1,6 +1,6 @@
 .us-map-wrapper {
   width: 100%;
-  max-width: 800px;
+  max-width: 960px;
   margin: 0 auto;
   user-select: none;
 }
@@ -15,10 +15,9 @@
 .region {
   fill: #4caf50;
   stroke: #0d1b2a;
-  stroke-width: 3;
+  stroke-width: 1.5;
   cursor: pointer;
-  transition: fill 0.15s ease, transform 0.15s ease;
-  transform-origin: center;
+  transition: fill 0.15s ease;
 }
 
 .region:hover {
@@ -28,14 +27,41 @@
 .region.selected {
   fill: #f9a03f;
   stroke: #0d1b2a;
-  stroke-width: 4;
+  stroke-width: 2.5;
 }
 
 .region-label {
   font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 700;
   fill: #0d1b2a;
   pointer-events: none;
   text-anchor: middle;
+  paint-order: stroke;
+  stroke: #ffffff;
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+
+/* Loading and error states */
+.us-map-loading,
+.us-map-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  color: #0d1b2a;
+  font-size: 1.1rem;
+  text-align: center;
+}
+
+.us-map-error {
+  color: #b71c1c;
+}
+
+.us-map-error code {
+  background-color: rgba(13, 27, 42, 0.1);
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+  font-family: monospace;
 }

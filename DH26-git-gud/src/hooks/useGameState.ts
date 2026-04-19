@@ -4,7 +4,7 @@ import type {
   PlantType,
   ResourceType,
 } from '../types/game';
-import { createInitialState } from '../game/state';
+import { createInitialState, type InitialStateConfig } from '../game/state';
 import {
   tick,
   tickN,
@@ -14,14 +14,32 @@ import {
   type TickLogEntry,
 } from '../game/engine';
 import { DEFAULT_TICK_SECONDS } from '../game/constants';
+import { snapshotState, type AnnualSnapshot } from '../game/dataLogger';
 
 export interface UseGameStateResult {
   state: GameState;
   log: TickLogEntry[];
+  notifications: GameNotification[];
+  annualSnapshots: AnnualSnapshot[];     // ← add
+  
+  actions: { /* ... */ };
+}
+
+export interface GameNotification {
+  id: string;
+  type: TickLogEntry['type'];
+  message: string;
+  createdAt: number;
+}
+
+export interface UseGameStateResult {
+  state: GameState;
+  log: TickLogEntry[];
+  notifications: GameNotification[];
   actions: {
     start: () => void;
     pause: () => void;
-    reset: () => void;
+    reset: (config?: InitialStateConfig) => void;
     buildPlant: (type: PlantType, stateCode: string) => boolean;
     buyResource: (resource: ResourceType, quantity: number) => boolean;
     demolishPlant: (plantId: string) => boolean;
@@ -38,11 +56,25 @@ export function useGameState(): UseGameStateResult {
   const [log, setLog] = useState<TickLogEntry[]>([]);
   const tickSpeedRef = useRef(DEFAULT_TICK_SECONDS);
   const intervalRef = useRef<number | null>(null);
+  const [notifications, setNotifications] = useState<GameNotification[]>([]);
+  const NOTIFICATION_DURATION_MS = 5000;
 
   const runTick = useCallback(() => {
     setState((current) => {
       const result = tick(current);
       setLog((prevLog) => [...prevLog.slice(-50), ...result.log]);
+      // Push new log entries as notifications
+      if (result.log.length > 0) {
+        setNotifications((prev) => [
+          ...prev,
+          ...result.log.map((entry) => ({
+            id: crypto.randomUUID(),
+            type: entry.type,
+            message: entry.message,
+            createdAt: Date.now(),
+          })),
+        ]);
+      }
       return result.state;
     });
   }, []);
@@ -51,10 +83,31 @@ export function useGameState(): UseGameStateResult {
     setState((current) => {
       const result = tickN(current, count);
       setLog((prevLog) => [...prevLog.slice(-50), ...result.log]);
-      // Preserve paused state — skipping shouldn't auto-unpause
+      if (result.log.length > 0) {
+        setNotifications((prev) => [
+          ...prev,
+          ...result.log.map((entry) => ({
+            id: crypto.randomUUID(),
+            type: entry.type,
+            message: entry.message,
+            createdAt: Date.now(),
+          })),
+        ]);
+      }
       return { ...result.state, isPaused: current.isPaused };
     });
   }, []);
+
+  // Auto-remove notifications after they expire
+  useEffect(() => {
+    if (notifications.length === 0) return;
+    const oldestAge = Date.now() - notifications[0].createdAt;
+    const remaining = NOTIFICATION_DURATION_MS - oldestAge;
+    const timeout = window.setTimeout(() => {
+      setNotifications((n) => n.slice(1));
+    }, Math.max(0, remaining));
+    return () => window.clearTimeout(timeout);
+  }, [notifications]);
 
   useEffect(() => {
     if (state.isPaused || state.isGameOver) {
@@ -86,10 +139,11 @@ export function useGameState(): UseGameStateResult {
     setState((s) => ({ ...s, isPaused: true }));
   }, []);
 
-  const reset = useCallback(() => {
-    setState(createInitialState());
-    setLog([]);
-  }, []);
+  const reset = useCallback((config?: InitialStateConfig) => {
+  setState(createInitialState(config));
+  setLog([]);
+  setNotifications([]);
+}, []);
 
   const buildPlant = useCallback(
     (type: PlantType, stateCode: string): boolean => {
@@ -143,6 +197,7 @@ export function useGameState(): UseGameStateResult {
   return {
     state,
     log,
+    notifications,
     actions: {
       start,
       pause,

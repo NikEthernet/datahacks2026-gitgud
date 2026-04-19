@@ -40,7 +40,7 @@ export const STATE_TO_REGION: Record<string, Region> = {
   // West
   CO: 'west', WY: 'west', MT: 'west', ID: 'west',
   UT: 'west', NV: 'west', CA: 'west', OR: 'west',
-  WA: 'west', AK: 'west', HI: 'west',
+  WA: 'west',
 };
 
 /**

@@ -1,0 +1,134 @@
+.year-select {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    #1a4971 0%,
+    #2d5f8f 50%,
+    #4a7fb0 100%
+  );
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  overflow-y: auto;
+  padding: 2rem;
+}
+
+.year-select-inner {
+  max-width: 900px;
+  width: 100%;
+  text-align: center;
+  color: #e0e1dd;
+}
+
+.year-select-title {
+  font-size: 2.5rem;
+  margin: 0 0 1rem;
+  color: #ffffff;
+}
+
+.year-select-subtitle {
+  font-size: 1.1rem;
+  line-height: 1.6;
+  color: #c9d4de;
+  max-width: 680px;
+  margin: 0 auto 2rem;
+}
+
+.year-display-card {
+  background: rgba(13, 27, 42, 0.5);
+  border: 2px solid #f9a03f;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  display: inline-block;
+  min-width: 320px;
+}
+
+.year-display-year {
+  font-size: 3.5rem;
+  font-weight: 800;
+  color: #f9a03f;
+  line-height: 1;
+  margin-bottom: 0.5rem;
+}
+
+.year-display-budget {
+  font-size: 1.1rem;
+  color: #e0e1dd;
+  margin-bottom: 0.5rem;
+}
+
+.year-display-budget strong {
+  color: #ffffff;
+  font-size: 1.3rem;
+}
+
+.year-display-note {
+  font-size: 0.9rem;
+  color: #c9d4de;
+}
+
+.year-loading {
+  color: #c9d4de;
+  margin: 2rem 0;
+}
+
+.year-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+  max-height: 40vh;
+  overflow-y: auto;
+  padding: 0.5rem;
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+}
+
+.year-btn {
+  padding: 0.6rem 0.25rem;
+  background-color: rgba(255, 255, 255, 0.08);
+  color: #e0e1dd;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: all 0.15s ease;
+}
+
+.year-btn:hover {
+  background-color: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.year-btn.selected {
+  background-color: #f9a03f;
+  color: #0d1b2a;
+  border-color: #f9a03f;
+}
+
+.year-start-btn {
+  padding: 1rem 3rem;
+  background-color: #f9a03f;
+  color: #0d1b2a;
+  border: none;
+  border-radius: 30px;
+  font-size: 1.2rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s ease, background-color 0.15s ease;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+}
+
+.year-start-btn:hover:not(:disabled) {
+  background-color: #ffb459;
+  transform: translateY(-2px);
+}
+
+.year-start-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

@@ -1,4 +1,11 @@
-import type { Region } from '../../game/regions';
+import { useEffect, useState, useMemo } from 'react';
+import { geoPath, geoAlbersUsa } from 'd3-geo';
+import type { Polygon, MultiPolygon as TopoMultiPolygon } from 'topojson-specification';
+import { feature, merge } from 'topojson-client';
+import type { Topology, GeometryCollection } from 'topojson-specification';
+import type { Feature, MultiPolygon, GeoJsonProperties } from 'geojson';
+import { STATE_TO_REGION, REGION_LABELS, type Region } from '../../game/regions';
+import { FIPS_TO_STATE } from '../../game/fips';
 import './USMap.css';
 
 interface USMapProps {
@@ -7,61 +14,160 @@ interface USMapProps {
 }
 
 /**
- * Simplified 5-region US map. Paths are stylized approximations, not
- * geographically precise. Each <path> has data-region for click routing.
+ * The TopoJSON structure we expect from us-10m.v1.json.
+ * The "states" object is a GeometryCollection of all US states.
+ */
+interface USTopology extends Topology {
+  objects: {
+    states: GeometryCollection;
+    nation: GeometryCollection;
+  };
+}
+
+interface RegionPath {
+  region: Region;
+  d: string;
+  centroidX: number;
+  centroidY: number;
+}
+
+/**
+ * Real US map with states merged into 5 clickable regions.
+ *
+ * Fetches us-10m.v1.json once on mount, merges state geometries by
+ * region using STATE_TO_REGION, and renders each region as a single
+ * <path>. Alaska and Hawaii excluded.
  */
 function USMap({ selectedRegion, onRegionClick }: USMapProps) {
+  const [topology, setTopology] = useState<USTopology | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/data/us-10m.v1.json')
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then((data: USTopology) => {
+        if (!cancelled) setTopology(data);
+      })
+      .catch((err: Error) => {
+        if (!cancelled) setLoadError(err.message);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  /**
+   * Merge state geometries by region and compute centroids for labels.
+   * Memoized so the expensive merge only runs when topology changes.
+   */
+  const regionPaths = useMemo<RegionPath[]>(() => {
+    if (!topology) return [];
+
+    // Use geoAlbersUsa projection — handles contiguous US nicely,
+    // but we scale/translate to fit our 960x600 viewBox.
+    const projection = geoAlbersUsa()
+      .scale(1200)
+      .translate([480, 300]);
+    const pathGenerator = geoPath(projection);
+
+    // Group state geometries by region
+    type PolygonalGeometry =
+      | import('topojson-specification').Polygon
+      | import('topojson-specification').MultiPolygon;
+
+    // Group state geometries by region
+    const geometriesByRegion = new Map<Region, PolygonalGeometry[]>();
+    for (const geom of topology.objects.states.geometries) {
+      const fipsId = String(geom.id).padStart(2, '0');
+      const stateCode = FIPS_TO_STATE[fipsId];
+      if (!stateCode) continue; // Skip Alaska, Hawaii, DC, PR
+
+      const region = STATE_TO_REGION[stateCode];
+      if (!region) continue;
+
+      // Narrow: the us-10m dataset only contains Polygon/MultiPolygon states.
+      // Skip anything unexpected (defensive — shouldn't happen in practice).
+      if (geom.type !== 'Polygon' && geom.type !== 'MultiPolygon') continue;
+
+      const existing = geometriesByRegion.get(region) ?? [];
+      existing.push(geom as PolygonalGeometry);
+      geometriesByRegion.set(region, existing);
+    }
+
+    // For each region, merge its state geometries into a single MultiPolygon
+    // and generate the SVG path + centroid.
+    const results: RegionPath[] = [];
+    for (const [region, geoms] of geometriesByRegion) {
+      const mergedFeature = merge(topology, geoms) as MultiPolygon;
+      const wrappedFeature: Feature<MultiPolygon, GeoJsonProperties> = {
+        type: 'Feature',
+        geometry: mergedFeature,
+        properties: {},
+      };
+
+      const d = pathGenerator(wrappedFeature);
+      const centroid = pathGenerator.centroid(wrappedFeature);
+
+      if (d) {
+        results.push({
+          region,
+          d,
+          centroidX: centroid[0],
+          centroidY: centroid[1],
+        });
+      }
+    }
+
+    return results;
+  }, [topology]);
+
+  if (loadError) {
+    return (
+      <div className="us-map-wrapper us-map-error">
+        <p>Failed to load map: {loadError}</p>
+        <p>
+          Make sure <code>public/data/us-10m.v1.json</code> exists.
+        </p>
+      </div>
+    );
+  }
+
+  if (!topology) {
+    return (
+      <div className="us-map-wrapper us-map-loading">
+        <p>Loading map…</p>
+      </div>
+    );
+  }
+
   return (
     <div className="us-map-wrapper">
       <svg
-        viewBox="0 0 800 480"
+        viewBox="0 0 960 600"
         xmlns="http://www.w3.org/2000/svg"
         className="us-map-svg"
       >
-        {/* West */}
-        <path
-          d="M 80 140 L 220 120 L 240 280 L 230 420 L 100 400 L 70 280 Z"
-          className={`region ${selectedRegion === 'west' ? 'selected' : ''}`}
-          onClick={() => onRegionClick('west')}
-          data-region="west"
-        />
-        <text x="150" y="280" className="region-label">West</text>
-
-        {/* Southwest */}
-        <path
-          d="M 240 280 L 420 280 L 440 440 L 230 420 Z"
-          className={`region ${selectedRegion === 'southwest' ? 'selected' : ''}`}
-          onClick={() => onRegionClick('southwest')}
-          data-region="southwest"
-        />
-        <text x="330" y="370" className="region-label">Southwest</text>
-
-        {/* Midwest */}
-        <path
-          d="M 220 120 L 480 140 L 500 280 L 420 280 L 240 280 Z"
-          className={`region ${selectedRegion === 'midwest' ? 'selected' : ''}`}
-          onClick={() => onRegionClick('midwest')}
-          data-region="midwest"
-        />
-        <text x="360" y="215" className="region-label">Midwest</text>
-
-        {/* Northeast */}
-        <path
-          d="M 480 140 L 680 160 L 720 240 L 620 280 L 500 280 Z"
-          className={`region ${selectedRegion === 'northeast' ? 'selected' : ''}`}
-          onClick={() => onRegionClick('northeast')}
-          data-region="northeast"
-        />
-        <text x="600" y="225" className="region-label">Northeast</text>
-
-        {/* Southeast */}
-        <path
-          d="M 420 280 L 620 280 L 680 400 L 560 440 L 440 440 Z"
-          className={`region ${selectedRegion === 'southeast' ? 'selected' : ''}`}
-          onClick={() => onRegionClick('southeast')}
-          data-region="southeast"
-        />
-        <text x="540" y="370" className="region-label">Southeast</text>
+        {regionPaths.map(({ region, d, centroidX, centroidY }) => (
+          <g key={region}>
+            <path
+              d={d}
+              className={`region ${selectedRegion === region ? 'selected' : ''}`}
+              onClick={() => onRegionClick(region)}
+              data-region={region}
+            />
+            <text
+              x={centroidX}
+              y={centroidY}
+              className="region-label"
+            >
+              {REGION_LABELS[region]}
+            </text>
+          </g>
+        ))}
       </svg>
     </div>
   );
