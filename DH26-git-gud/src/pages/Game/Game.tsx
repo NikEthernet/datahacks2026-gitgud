@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { GameProvider, useGame } from '../../context/GameContext';
 import USMap from '../../components/game/USMap';
+import YearSelect from '../../components/game/YearSelect';
 import Modal from '../../components/ui/Modal';
 import type { Region } from '../../game/regions';
 import {
@@ -10,6 +11,7 @@ import {
 } from '../../game/regions';
 import type { PlantType, ResourceType } from '../../types/game';
 import { getPlantDefinition } from '../../game/plants';
+import { snapshotsToCSV, downloadCSV } from '../../game/dataLogger';
 import './Game.css';
 
 /**
@@ -58,7 +60,7 @@ function formatLargeNumber(n: number): string {
 }
 
 /**
- * Outer wrapper — just ensures GameProvider wraps the actual game UI.
+ * Outer wrapper — ensures GameProvider wraps the actual game UI.
  */
 function Game() {
   return (
@@ -69,31 +71,40 @@ function Game() {
 }
 
 function GameInner() {
-  const { state, log, actions } = useGame();
+  const { state, notifications, annualSnapshots, actions } = useGame();
+  const [hasStarted, setHasStarted] = useState(false);
   const [selectedRegion, setSelectedRegion] = useState<Region | null>(null);
   const [buildModalOpen, setBuildModalOpen] = useState(false);
   const [energyModalOpen, setEnergyModalOpen] = useState(false);
   const [marketModalOpen, setMarketModalOpen] = useState(false);
 
-  // Projected sea-level contribution from cumulative emissions.
-  // Placeholder formula: 1 billion tons CO2 ≈ 0.01 m contribution.
-  // Will be replaced with CSV-driven calibration later.
   const projectedSeaLevel = useMemo(() => {
     return (state.metrics.totalCO2Emitted / 1_000_000_000) * 0.01;
   }, [state.metrics.totalCO2Emitted]);
+
+  const handleStartGame = (year: number, startingMoney: number) => {
+    actions.reset({ startYear: year, startingMoney });
+    setHasStarted(true);
+  };
 
   const handleRegionClick = (region: Region) => {
     setSelectedRegion(region === selectedRegion ? null : region);
   };
 
   const handleBuildClick = () => {
-    if (!selectedRegion) {
-      // Open build modal with no region preselected — user picks inside
-      setBuildModalOpen(true);
-    } else {
-      setBuildModalOpen(true);
-    }
+    setBuildModalOpen(true);
   };
+
+  const handleExportData = () => {
+    if (annualSnapshots.length === 0) return;
+    const csv = snapshotsToCSV(annualSnapshots);
+    downloadCSV(csv, `energyops-playthrough-${Date.now()}.csv`);
+  };
+
+  // Show year-select screen until the player picks a year
+  if (!hasStarted) {
+    return <YearSelect onStart={handleStartGame} />;
+  }
 
   return (
     <div className="game-page">
@@ -115,7 +126,7 @@ function GameInner() {
         />
       </div>
 
-      {/* Resource ticker — nonrenewable fuel stockpiles */}
+      {/* Resource ticker */}
       <div className="resource-ticker">
         {ALL_RESOURCES.map((r) => (
           <div key={r} className="resource-chip">
@@ -138,37 +149,48 @@ function GameInner() {
         />
       </div>
 
-      {/* Bottom-left Energy button */}
-      <button
-        className="game-corner-btn game-corner-btn-left"
-        onClick={() => setEnergyModalOpen(true)}
-      >
-        <span className="corner-btn-icon">📊</span>
-        <span className="corner-btn-label">Energy</span>
-      </button>
-
-      {/* Bottom-left Market button (above Energy) */}
-      <button
-        className="game-corner-btn game-corner-btn-left game-corner-btn-upper"
-        onClick={() => setMarketModalOpen(true)}
-      >
-        <span className="corner-btn-icon">⛽</span>
-        <span className="corner-btn-label">Market</span>
-      </button>
-
-      {/* Bottom-right Build button */}
-      <button
-        className="game-corner-btn game-corner-btn-right"
-        onClick={handleBuildClick}
-      >
-        <span className="corner-btn-icon">🔨</span>
-        <span className="corner-btn-label">Build</span>
-      </button>
+      {/* Right-side button stack */}
+      <div className="game-button-stack">
+        <button
+          className="game-stack-btn"
+          onClick={() => setMarketModalOpen(true)}
+        >
+          <span className="stack-btn-icon">⛽</span>
+          <span className="stack-btn-label">Market</span>
+        </button>
+        <button
+          className="game-stack-btn"
+          onClick={() => setEnergyModalOpen(true)}
+        >
+          <span className="stack-btn-icon">📊</span>
+          <span className="stack-btn-label">Energy</span>
+        </button>
+        <button
+          className="game-stack-btn"
+          onClick={handleBuildClick}
+        >
+          <span className="stack-btn-icon">🔨</span>
+          <span className="stack-btn-label">Build</span>
+        </button>
+        <button
+          className="game-stack-btn"
+          onClick={handleExportData}
+          disabled={annualSnapshots.length === 0}
+          title={
+            annualSnapshots.length === 0
+              ? 'No data yet — play through at least one year'
+              : `Download ${annualSnapshots.length} years of data`
+          }
+        >
+          <span className="stack-btn-icon">💾</span>
+          <span className="stack-btn-label">Export</span>
+        </button>
+      </div>
 
       {/* Tick controls — bottom center */}
       <TickControls />
 
-      {/* Region detail side drawer */}
+      {/* Region detail side drawer (left) */}
       {selectedRegion && (
         <RegionPanel
           region={selectedRegion}
@@ -176,6 +198,15 @@ function GameInner() {
           onBuild={() => setBuildModalOpen(true)}
         />
       )}
+
+      {/* Notifications (top-right, fade after 5s) */}
+      <div className="notifications-container">
+        {notifications.map((n) => (
+          <div key={n.id} className={`notification notification-${n.type}`}>
+            {n.message}
+          </div>
+        ))}
+      </div>
 
       {/* Build modal */}
       <Modal
@@ -200,13 +231,14 @@ function GameInner() {
         />
       </Modal>
 
+      {/* Market modal */}
       <Modal
         isOpen={marketModalOpen}
         onClose={() => setMarketModalOpen(false)}
         title="Resource Market"
         wide
       >
-        <ResourceMarketPanel onClose={() => setMarketModalOpen(false)} />
+        <ResourceMarketPanel />
       </Modal>
 
       {/* Energy modal */}
@@ -218,17 +250,6 @@ function GameInner() {
       >
         <EnergyPanel />
       </Modal>
-
-      {/* Recent event log — bottom-right-ish overlay */}
-      {log.length > 0 && (
-        <div className="game-log">
-          {log.slice(-3).map((entry, idx) => (
-            <div key={idx} className={`log-entry log-${entry.type}`}>
-              {entry.message}
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
@@ -290,7 +311,7 @@ function TickControls() {
 }
 
 /* ============================================================
-   REGION DETAIL PANEL (side drawer)
+   REGION DETAIL PANEL
    ============================================================ */
 
 function RegionPanel({
@@ -304,7 +325,6 @@ function RegionPanel({
 }) {
   const { state } = useGame();
 
-  // Rank plant types for this region by their suitability
   const ranked = useMemo(() => {
     return ALL_PLANT_TYPES
       .map((type) => ({
@@ -338,14 +358,15 @@ function RegionPanel({
                 {plantDisplayName(type)}
               </span>
               <span
-                className={`suitability-badge ${suitability >= 1.2
-                  ? 'excellent'
-                  : suitability >= 1.0
-                    ? 'good'
-                    : suitability >= 0.8
-                      ? 'ok'
-                      : 'poor'
-                  }`}
+                className={`suitability-badge ${
+                  suitability >= 1.2
+                    ? 'excellent'
+                    : suitability >= 1.0
+                      ? 'good'
+                      : suitability >= 0.8
+                        ? 'ok'
+                        : 'poor'
+                }`}
               >
                 ×{suitability.toFixed(2)}
               </span>
@@ -382,7 +403,7 @@ function RegionPanel({
 }
 
 /* ============================================================
-   BUILD MENU (inside modal)
+   BUILD MENU
    ============================================================ */
 
 function BuildMenu({
@@ -439,14 +460,15 @@ function BuildMenu({
               <div className="build-card-header">
                 <h4>{def.displayName}</h4>
                 <span
-                  className={`suitability-badge ${suitability >= 1.2
-                    ? 'excellent'
-                    : suitability >= 1.0
-                      ? 'good'
-                      : suitability >= 0.8
-                        ? 'ok'
-                        : 'poor'
-                    }`}
+                  className={`suitability-badge ${
+                    suitability >= 1.2
+                      ? 'excellent'
+                      : suitability >= 1.0
+                        ? 'good'
+                        : suitability >= 0.8
+                          ? 'ok'
+                          : 'poor'
+                  }`}
                 >
                   ×{suitability.toFixed(2)}
                 </span>
@@ -493,7 +515,7 @@ function BuildMenu({
 }
 
 /* ============================================================
-   ENERGY PANEL (inside modal)
+   ENERGY PANEL
    ============================================================ */
 
 function EnergyPanel() {
@@ -502,11 +524,9 @@ function EnergyPanel() {
   const operational = state.plants.filter((p) => p.operational);
   const building = state.plants.filter((p) => !p.operational);
 
-  // Annual totals from monthly cumulative metrics
   const annualEnergy = state.metrics.totalEnergyProduced;
   const annualCO2 = state.metrics.totalCO2Emitted;
 
-  // Breakdown by plant type
   const byType = useMemo(() => {
     const map = new Map<PlantType, number>();
     for (const p of operational) {
@@ -515,7 +535,6 @@ function EnergyPanel() {
     return map;
   }, [operational]);
 
-  // Annual maintenance cost
   const annualMaintenance = useMemo(() => {
     let total = 0;
     for (const p of operational) {
@@ -576,7 +595,11 @@ function EnergyPanel() {
   );
 }
 
-function ResourceMarketPanel({ onClose }: { onClose: () => void }) {
+/* ============================================================
+   RESOURCE MARKET PANEL
+   ============================================================ */
+
+function ResourceMarketPanel() {
   const { state, actions } = useGame();
   const [quantities, setQuantities] = useState<Record<ResourceType, number>>({
     coal: 0,
@@ -628,11 +651,11 @@ function ResourceMarketPanel({ onClose }: { onClose: () => void }) {
                   onClick={() =>
                     setQuantities((q) => ({
                       ...q,
-                      [resource]: Math.max(0, q[resource] - 100),
+                      [resource]: Math.max(0, q[resource] - 10),
                     }))
                   }
                 >
-                  −100
+                  −10
                 </button>
                 <input
                   type="number"
@@ -651,11 +674,11 @@ function ResourceMarketPanel({ onClose }: { onClose: () => void }) {
                   onClick={() =>
                     setQuantities((q) => ({
                       ...q,
-                      [resource]: q[resource] + 100,
+                      [resource]: q[resource] + 10,
                     }))
                   }
                 >
-                  +100
+                  +10
                 </button>
               </div>
               <div className="market-total">

@@ -12,7 +12,7 @@ interface YearSelectProps {
 }
 
 function YearSelect({ onStart }: YearSelectProps) {
-  const [consumptionData, setConsumptionData] = useState
+  const [consumptionData, setConsumptionData] = useState<
     TotalEnergyConsumptionRow[]
   >([]);
   const [selectedYear, setSelectedYear] = useState<number>(1949);
