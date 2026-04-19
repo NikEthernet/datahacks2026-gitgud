@@ -7,15 +7,20 @@ import {
   START_MONTH,
 } from './constants';
 
+export interface InitialStateConfig {
+  startYear?: number;
+  startingMoney?: number;
+}
+
 /**
  * Factory for fresh game state.
  * Called once at game start and when the player resets.
  */
-export function createInitialState(): GameState {
+export function createInitialState(config: InitialStateConfig = {}): GameState {
   return {
-    currentYear: START_YEAR,
+    currentYear: config.startYear ?? START_YEAR,
     currentMonth: START_MONTH,
-    money: STARTING_MONEY,
+    money: config.startingMoney ?? STARTING_MONEY,
     resources: { ...STARTING_RESOURCES } as ResourceInventory,
     resourcePrices: { ...RESOURCE_PRICES },
     plants: [],
@@ -27,7 +32,7 @@ export function createInitialState(): GameState {
     },
     activeEvents: [],
     isGameOver: false,
-    isPaused: true, // start paused so player can set up before time flows
+    isPaused: true,
   };
 }
 
