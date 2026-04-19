@@ -1,0 +1,130 @@
+.cmp-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(13, 27, 42, 0.55);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 2rem;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+.cmp-modal {
+  background: #ffffff;
+  border: 1px solid #e0e1dd;
+  border-radius: 12px;
+  width: min(1100px, 100%);
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 24px 60px rgba(13, 27, 42, 0.35);
+  overflow: hidden;
+}
+
+.cmp-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 1.5rem 1.75rem 1.25rem;
+  background: #0d1b2a;
+  color: #e0e1dd;
+}
+
+.cmp-title {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.cmp-subtitle {
+  margin: 0.3rem 0 0;
+  color: #c9d4de;
+  font-size: 0.875rem;
+}
+
+.cmp-close {
+  background: transparent;
+  border: 1px solid #415a77;
+  color: #e0e1dd;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+.cmp-close:hover {
+  background: #415a77;
+  color: #ffffff;
+}
+
+.cmp-body {
+  overflow-y: auto;
+  padding: 1.5rem 1.75rem 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  background: #f8f9fa;
+}
+
+.cmp-status {
+  color: #6c757d;
+  font-size: 0.95rem;
+  margin: 2rem 0;
+  text-align: center;
+}
+.cmp-error { color: #b71c1c; }
+
+.cmp-section {
+  background: #ffffff;
+  border: 1px solid #e0e1dd;
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.cmp-section-title {
+  margin: 0 0 0.3rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #0d1b2a;
+  padding-bottom: 0.4rem;
+  border-bottom: 2px solid #f9a03f;
+}
+
+.cmp-section-sub {
+  margin: 0.5rem 0 1rem;
+  color: #415a77;
+  font-size: 0.875rem;
+}
+
+.cmp-chart {
+  margin-top: 0.5rem;
+}
+
+/* Trigger button — lives in Game HUD */
+.cmp-trigger {
+  background: #f9a03f;
+  border: none;
+  color: #0d1b2a;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.9rem;
+  transition: background 0.15s, transform 0.1s;
+}
+.cmp-trigger:hover:not(:disabled) {
+  background: #ffb459;
+  transform: translateY(-1px);
+}
+.cmp-trigger:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

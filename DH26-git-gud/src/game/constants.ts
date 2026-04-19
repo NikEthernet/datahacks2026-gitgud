@@ -1,6 +1,5 @@
 import type {
   PlantType,
-  ResourceType,
   ResourcePrices,
   FuelRequirement,
   SeasonalCurve,
@@ -9,37 +8,43 @@ import type {
 // ============================================================
 // ECONOMY
 // ============================================================
-
 /**
  * Starting money in USD millions. Tunable during playtesting.
  */
 export const STARTING_MONEY = 2000; // $2B
 
 /**
- * Starting fuel stockpiles.
+ * Starting fuel stockpiles — sized so one plant of each fueled type
+ * has roughly 3 months of autonomy at full effective output before
+ * the player needs to visit the market.
+ *
+ * Rough math: effective monthly output ≈ energyPerMonth × capacity × 1.0
+ *   coal:        500,000 × 0.50 = 250,000 MWh × 0.45 = 112,500 units/mo → ~340,000 for 3 mo
+ *   natural_gas: 400,000 × 0.55 = 220,000 MWh × 0.20 =  44,000 units/mo → ~132,000 for 3 mo
+ *   petroleum:   350,000 × 0.30 = 105,000 MWh × 0.60 =  63,000 units/mo → ~190,000 for 3 mo
+ *   nuclear:     900,000 × 0.90 = 810,000 MWh × 0.003 =  2,430 units/mo → ~7,300 for 3 mo
  */
 export const STARTING_RESOURCES = {
-  coal: 1000,
-  natural_gas: 500,
-  petroleum: 500,
-  uranium: 10,
+  coal: 340_000,
+  natural_gas: 132_000,
+  petroleum: 190_000,
+  uranium: 7_300,
 } as const;
 
 /**
- * Flat resource prices (pure convenience model, no hedging).
- * Tunable to balance strategic choices between plant types.
+ * Flat resource prices in $/unit. Sized so a month of resupply
+ * costs roughly 1–3% of the $2B starting budget per fueled plant.
  */
 export const RESOURCE_PRICES: ResourcePrices = {
-  coal: 10,
-  natural_gas: 8,
-  petroleum: 15,
-  uranium: 200,
+  coal: 0.08,         // ~$9,000/mo to supply one coal plant
+  natural_gas: 0.25,  // ~$11,000/mo
+  petroleum: 0.30,    // ~$19,000/mo
+  uranium: 12.0,      // ~$29,000/mo (small qty, high unit price)
 };
 
 // ============================================================
 // DATE BOUNDS & TICK RATE
 // ============================================================
-
 export const START_YEAR = 1949;
 export const START_MONTH = 1;
 export const END_YEAR = 2025;
@@ -51,13 +56,8 @@ export const END_MONTH = 12;
 export const DEFAULT_TICK_SECONDS = 1.0;
 
 // ============================================================
-// FUEL REQUIREMENTS
+// FUEL REQUIREMENTS (unchanged — these are physically accurate)
 // ============================================================
-
-/**
- * Fuel consumption per MWh for each fueled plant type.
- * Renewables (hydro, wind, solar) are absent.
- */
 export const FUEL_REQUIREMENTS: Partial<Record<PlantType, FuelRequirement>> = {
   coal:        { resource: 'coal',        unitsPerMWh: 0.45 },
   natural_gas: { resource: 'natural_gas', unitsPerMWh: 0.20 },
@@ -68,10 +68,6 @@ export const FUEL_REQUIREMENTS: Partial<Record<PlantType, FuelRequirement>> = {
 // ============================================================
 // CAPACITY FACTORS & SEASONALITY
 // ============================================================
-
-/**
- * Base capacity factors (real-world averages).
- */
 export const BASE_CAPACITY_FACTORS: Record<PlantType, number> = {
   coal:        0.50,
   natural_gas: 0.55,
@@ -82,11 +78,6 @@ export const BASE_CAPACITY_FACTORS: Record<PlantType, number> = {
   solar:       0.22,
 };
 
-/**
- * Monthly capacity multipliers per plant type.
- * Index 0 = January, 11 = December.
- * Mean of each curve is ~1.0 to preserve annual totals.
- */
 export const SEASONAL_CURVES: Record<PlantType, SeasonalCurve> = {
   coal:        [1.00, 1.00, 0.98, 0.97, 0.98, 1.00, 1.02, 1.02, 0.98, 0.97, 1.00, 1.00],
   natural_gas: [1.05, 1.05, 1.00, 0.98, 0.98, 1.00, 1.00, 1.00, 0.98, 0.98, 1.02, 1.05],
@@ -96,7 +87,5 @@ export const SEASONAL_CURVES: Record<PlantType, SeasonalCurve> = {
   wind:        [1.25, 1.20, 1.25, 1.15, 0.95, 0.80, 0.70, 0.70, 0.85, 1.00, 1.15, 1.20],
   solar:       [0.65, 0.80, 1.00, 1.20, 1.35, 1.45, 1.45, 1.35, 1.15, 0.90, 0.70, 0.60],
 };
-/**
- * Demolition cost as a fraction of original build cost.
- */
+
 export const DEMOLITION_COST_RATIO = 0.2;

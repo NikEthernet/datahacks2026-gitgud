@@ -11,14 +11,10 @@ import {
 } from '../../game/regions';
 import type { PlantType, ResourceType } from '../../types/game';
 import { getPlantDefinition } from '../../game/plants';
-import { snapshotsToCSV, downloadCSV } from '../../game/dataLogger';
+import ComparisonModal from '../../components/comparison/ComparisonModal';
+import { START_YEAR } from '../../game/constants';
 import './Game.css';
 
-/**
- * Representative state code per region — used when the engine needs
- * a state for buildPlant(). The suitability table resolves correctly
- * since all states in a region share the same multipliers.
- */
 const REPRESENTATIVE_STATE: Record<Region, string> = {
   northeast: 'NY',
   southeast: 'GA',
@@ -59,9 +55,6 @@ function formatLargeNumber(n: number): string {
   return n.toFixed(0);
 }
 
-/**
- * Outer wrapper — ensures GameProvider wraps the actual game UI.
- */
 function Game() {
   return (
     <GameProvider>
@@ -71,8 +64,9 @@ function Game() {
 }
 
 function GameInner() {
-  const { state, notifications, annualSnapshots, actions } = useGame();
+  const { state, notifications, actions } = useGame();
   const [hasStarted, setHasStarted] = useState(false);
+  const [comparisonOpen, setComparisonOpen] = useState(false);
   const [selectedRegion, setSelectedRegion] = useState<Region | null>(null);
   const [buildModalOpen, setBuildModalOpen] = useState(false);
   const [energyModalOpen, setEnergyModalOpen] = useState(false);
@@ -95,19 +89,26 @@ function GameInner() {
     setBuildModalOpen(true);
   };
 
-  const handleExportData = () => {
-    if (annualSnapshots.length === 0) return;
-    const csv = snapshotsToCSV(annualSnapshots);
-    downloadCSV(csv, `energyops-playthrough-${Date.now()}.csv`);
-  };
-
-  // Show year-select screen until the player picks a year
   if (!hasStarted) {
     return <YearSelect onStart={handleStartGame} />;
   }
 
+  const compareGateYear = START_YEAR + 1;
+  const compareEnabled = state.currentYear >= compareGateYear;
+
   return (
     <div className="game-page">
+      {state.isGameOver && (
+        <ComparisonModal
+          onClose={() => {}}
+          dismissible={false}
+          title="Final Results — Simulation Complete"
+        />
+      )}
+      {comparisonOpen && !state.isGameOver && (
+        <ComparisonModal onClose={() => setComparisonOpen(false)} />
+      )}
+
       {/* Top HUD */}
       <div className="game-hud">
         <HUDStat icon="💰" value={formatMoney(state.money)} />
@@ -124,6 +125,18 @@ function GameInner() {
           icon="📅"
           value={`${MONTH_NAMES[state.currentMonth - 1]} ${state.currentYear}`}
         />
+        <button
+          className="cmp-trigger"
+          onClick={() => setComparisonOpen(true)}
+          disabled={!compareEnabled}
+          title={
+            !compareEnabled
+              ? 'Available after one year of play'
+              : 'Compare your run to history'
+          }
+        >
+          Compare
+        </button>
       </div>
 
       {/* Resource ticker */}
@@ -149,7 +162,7 @@ function GameInner() {
         />
       </div>
 
-      {/* Right-side button stack */}
+      {/* Right-side button stack — Export removed */}
       <div className="game-button-stack">
         <button
           className="game-stack-btn"
@@ -165,32 +178,14 @@ function GameInner() {
           <span className="stack-btn-icon">📊</span>
           <span className="stack-btn-label">Energy</span>
         </button>
-        <button
-          className="game-stack-btn"
-          onClick={handleBuildClick}
-        >
+        <button className="game-stack-btn" onClick={handleBuildClick}>
           <span className="stack-btn-icon">🔨</span>
           <span className="stack-btn-label">Build</span>
         </button>
-        <button
-          className="game-stack-btn"
-          onClick={handleExportData}
-          disabled={annualSnapshots.length === 0}
-          title={
-            annualSnapshots.length === 0
-              ? 'No data yet — play through at least one year'
-              : `Download ${annualSnapshots.length} years of data`
-          }
-        >
-          <span className="stack-btn-icon">💾</span>
-          <span className="stack-btn-label">Export</span>
-        </button>
       </div>
 
-      {/* Tick controls — bottom center */}
       <TickControls />
 
-      {/* Region detail side drawer (left) */}
       {selectedRegion && (
         <RegionPanel
           region={selectedRegion}
@@ -199,7 +194,6 @@ function GameInner() {
         />
       )}
 
-      {/* Notifications (top-right, fade after 5s) */}
       <div className="notifications-container">
         {notifications.map((n) => (
           <div key={n.id} className={`notification notification-${n.type}`}>
@@ -208,7 +202,6 @@ function GameInner() {
         ))}
       </div>
 
-      {/* Build modal */}
       <Modal
         isOpen={buildModalOpen}
         onClose={() => setBuildModalOpen(false)}
@@ -231,7 +224,6 @@ function GameInner() {
         />
       </Modal>
 
-      {/* Market modal */}
       <Modal
         isOpen={marketModalOpen}
         onClose={() => setMarketModalOpen(false)}
@@ -241,7 +233,6 @@ function GameInner() {
         <ResourceMarketPanel />
       </Modal>
 
-      {/* Energy modal */}
       <Modal
         isOpen={energyModalOpen}
         onClose={() => setEnergyModalOpen(false)}
@@ -253,10 +244,6 @@ function GameInner() {
     </div>
   );
 }
-
-/* ============================================================
-   HUD SUBCOMPONENTS
-   ============================================================ */
 
 function HUDStat({ icon, value }: { icon: string; value: string }) {
   return (
@@ -309,10 +296,6 @@ function TickControls() {
     </div>
   );
 }
-
-/* ============================================================
-   REGION DETAIL PANEL
-   ============================================================ */
 
 function RegionPanel({
   region,
@@ -401,10 +384,6 @@ function RegionPanel({
     </div>
   );
 }
-
-/* ============================================================
-   BUILD MENU
-   ============================================================ */
 
 function BuildMenu({
   region,
@@ -514,10 +493,6 @@ function BuildMenu({
   );
 }
 
-/* ============================================================
-   ENERGY PANEL
-   ============================================================ */
-
 function EnergyPanel() {
   const { state } = useGame();
 
@@ -595,10 +570,6 @@ function EnergyPanel() {
   );
 }
 
-/* ============================================================
-   RESOURCE MARKET PANEL
-   ============================================================ */
-
 function ResourceMarketPanel() {
   const { state, actions } = useGame();
   const [quantities, setQuantities] = useState<Record<ResourceType, number>>({
@@ -651,11 +622,11 @@ function ResourceMarketPanel() {
                   onClick={() =>
                     setQuantities((q) => ({
                       ...q,
-                      [resource]: Math.max(0, q[resource] - 10),
+                      [resource]: Math.max(0, q[resource] - 1000),
                     }))
                   }
                 >
-                  −10
+                  −1K
                 </button>
                 <input
                   type="number"
@@ -674,15 +645,15 @@ function ResourceMarketPanel() {
                   onClick={() =>
                     setQuantities((q) => ({
                       ...q,
-                      [resource]: q[resource] + 10,
+                      [resource]: q[resource] + 1000,
                     }))
                   }
                 >
-                  +10
+                  +1K
                 </button>
               </div>
               <div className="market-total">
-                Total: <strong>${cost.toFixed(0)}M</strong>
+                Total: <strong>${cost.toFixed(2)}M</strong>
               </div>
               <button
                 className="market-buy-btn"
@@ -702,10 +673,6 @@ function ResourceMarketPanel() {
     </div>
   );
 }
-
-/* ============================================================
-   HELPERS
-   ============================================================ */
 
 function plantDisplayName(type: PlantType): string {
   const names: Record<PlantType, string> = {

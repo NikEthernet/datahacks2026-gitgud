@@ -1,5 +1,9 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import type { GameState, PlantType, ResourceType } from '../types/game';
+import type {
+  GameState,
+  PlantType,
+  ResourceType,
+} from '../types/game';
 import { createInitialState, type InitialStateConfig } from '../game/state';
 import {
   tick,
@@ -37,36 +41,10 @@ export interface UseGameStateResult {
 }
 
 const NOTIFICATION_DURATION_MS = 5000;
-// If the same message is added within this window, it's dropped as a duplicate.
-// Handles both React-StrictMode double-fires and engine-side spam of the same
-// persistent condition (e.g. ongoing fuel shortage).
-const DEDUPE_WINDOW_MS = 1500;
 
-function dedupeAppend(
-  existing: GameNotification[],
-  incoming: TickLogEntry[]
-): GameNotification[] {
-  if (incoming.length === 0) return existing;
-  const now = Date.now();
-  const recentMessages = new Set(
-    existing
-      .filter((n) => now - n.createdAt < DEDUPE_WINDOW_MS)
-      .map((n) => n.message)
-  );
-  const additions: GameNotification[] = [];
-  for (const entry of incoming) {
-    if (recentMessages.has(entry.message)) continue;
-    recentMessages.add(entry.message);
-    additions.push({
-      id: crypto.randomUUID(),
-      type: entry.type,
-      message: entry.message,
-      createdAt: now,
-    });
-  }
-  return additions.length === 0 ? existing : [...existing, ...additions];
-}
-
+/**
+ * Primary game hook — holds state, runs the tick loop, exposes actions.
+ */
 export function useGameState(): UseGameStateResult {
   const [state, setState] = useState<GameState>(createInitialState());
   const [log, setLog] = useState<TickLogEntry[]>([]);
@@ -79,15 +57,28 @@ export function useGameState(): UseGameStateResult {
     setState((current) => {
       const result = tick(current);
       setLog((prevLog) => [...prevLog.slice(-50), ...result.log]);
+
+      // Push new log entries as notifications
       if (result.log.length > 0) {
-        setNotifications((prev) => dedupeAppend(prev, result.log));
+        setNotifications((prev) => [
+          ...prev,
+          ...result.log.map((entry) => ({
+            id: crypto.randomUUID(),
+            type: entry.type,
+            message: entry.message,
+            createdAt: Date.now(),
+          })),
+        ]);
       }
+
+      // Capture annual snapshot every January (when year changes)
       if (
         result.state.currentMonth === 1 &&
         result.state.currentYear !== current.currentYear
       ) {
         setAnnualSnapshots((prev) => [...prev, snapshotState(result.state)]);
       }
+
       return result.state;
     });
   }, []);
@@ -96,16 +87,28 @@ export function useGameState(): UseGameStateResult {
     setState((current) => {
       const result = tickN(current, count);
       setLog((prevLog) => [...prevLog.slice(-50), ...result.log]);
+
       if (result.log.length > 0) {
-        setNotifications((prev) => dedupeAppend(prev, result.log));
+        setNotifications((prev) => [
+          ...prev,
+          ...result.log.map((entry) => ({
+            id: crypto.randomUUID(),
+            type: entry.type,
+            message: entry.message,
+            createdAt: Date.now(),
+          })),
+        ]);
       }
+
       if (result.newAnnualSnapshots && result.newAnnualSnapshots.length > 0) {
         setAnnualSnapshots((prev) => [...prev, ...result.newAnnualSnapshots!]);
       }
+
       return { ...result.state, isPaused: current.isPaused };
     });
   }, []);
 
+  // Auto-remove the oldest notification after NOTIFICATION_DURATION_MS
   useEffect(() => {
     if (notifications.length === 0) return;
     const oldestAge = Date.now() - notifications[0].createdAt;
@@ -116,6 +119,7 @@ export function useGameState(): UseGameStateResult {
     return () => window.clearTimeout(timeout);
   }, [notifications]);
 
+  // Run the tick loop when unpaused
   useEffect(() => {
     if (state.isPaused || state.isGameOver) {
       if (intervalRef.current !== null) {
@@ -124,7 +128,12 @@ export function useGameState(): UseGameStateResult {
       }
       return;
     }
-    intervalRef.current = window.setInterval(runTick, tickSpeedRef.current * 1000);
+
+    intervalRef.current = window.setInterval(
+      runTick,
+      tickSpeedRef.current * 1000
+    );
+
     return () => {
       if (intervalRef.current !== null) {
         window.clearInterval(intervalRef.current);
@@ -133,8 +142,14 @@ export function useGameState(): UseGameStateResult {
     };
   }, [state.isPaused, state.isGameOver, runTick]);
 
-  const start = useCallback(() => setState((s) => ({ ...s, isPaused: false })), []);
-  const pause = useCallback(() => setState((s) => ({ ...s, isPaused: true })), []);
+  const start = useCallback(() => {
+    setState((s) => ({ ...s, isPaused: false }));
+  }, []);
+
+  const pause = useCallback(() => {
+    setState((s) => ({ ...s, isPaused: true }));
+  }, []);
+
   const reset = useCallback((config?: InitialStateConfig) => {
     setState(createInitialState(config));
     setLog([]);
@@ -142,31 +157,46 @@ export function useGameState(): UseGameStateResult {
     setAnnualSnapshots([]);
   }, []);
 
-  const buildPlant = useCallback((type: PlantType, stateCode: string): boolean => {
-    let success = false;
-    setState((current) => {
-      const next = engineBuildPlant(current, type, stateCode);
-      if (next) { success = true; return next; }
-      return current;
-    });
-    return success;
-  }, []);
+  const buildPlant = useCallback(
+    (type: PlantType, stateCode: string): boolean => {
+      let success = false;
+      setState((current) => {
+        const next = engineBuildPlant(current, type, stateCode);
+        if (next) {
+          success = true;
+          return next;
+        }
+        return current;
+      });
+      return success;
+    },
+    []
+  );
 
-  const buyResource = useCallback((resource: ResourceType, quantity: number): boolean => {
-    let success = false;
-    setState((current) => {
-      const next = engineBuyResource(current, resource, quantity);
-      if (next) { success = true; return next; }
-      return current;
-    });
-    return success;
-  }, []);
+  const buyResource = useCallback(
+    (resource: ResourceType, quantity: number): boolean => {
+      let success = false;
+      setState((current) => {
+        const next = engineBuyResource(current, resource, quantity);
+        if (next) {
+          success = true;
+          return next;
+        }
+        return current;
+      });
+      return success;
+    },
+    []
+  );
 
   const demolishPlant = useCallback((plantId: string): boolean => {
     let success = false;
     setState((current) => {
       const next = engineDemolishPlant(current, plantId);
-      if (next) { success = true; return next; }
+      if (next) {
+        success = true;
+        return next;
+      }
       return current;
     });
     return success;
@@ -182,8 +212,14 @@ export function useGameState(): UseGameStateResult {
     notifications,
     annualSnapshots,
     actions: {
-      start, pause, reset, buildPlant, buyResource,
-      demolishPlant, setTickSpeed, skipMonths,
+      start,
+      pause,
+      reset,
+      buildPlant,
+      buyResource,
+      demolishPlant,
+      setTickSpeed,
+      skipMonths,
     },
   };
 }
