@@ -97,17 +97,19 @@ export interface SolarConsumptionRow {
 }
 
 // ============================================================
-// SEA SURFACE HEIGHT (Specific_Location_SSH_Real.csv)
+// SEA LEVEL (merged from Cleaned_Sea_Level_Variation.csv
+// and Sea_Level_Rise_Formatted.csv)
 // ============================================================
 
 /**
- * Daily sea surface height anomaly at a specific Gulf of Mexico location.
+ * Annual total SSH summed across all lat/lon points from
+ * Cleaned_Sea_Level_Variation.csv, merged with the mean monthly
+ * sea level (MSL) from Sea_Level_Rise_Formatted.csv.
+ * Only years present in BOTH datasets are included.
  */
-export interface SSHRow {
-  date: string;                // ISO date
-  lat: number;
-  lon: number;
-  ssh: number;                 // meters relative to baseline
+export interface SeaLevelRow {
+  month: string;       // "YYYY-MM"
+  combinedSealevel: number;
 }
 
 // ============================================================

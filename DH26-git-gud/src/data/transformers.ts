@@ -3,7 +3,7 @@ import type {
   TotalEnergyConsumptionRow,
   SolarLCOERow,
   PPIRow,
-  SSHRow,
+  //SeaLevelRow,
   CO2EmissionsBySourceRow,
   LCOETrendRow,
 } from '../types/data';
@@ -104,14 +104,14 @@ export function getHistoricalMix(
 
 /**
  * Aggregates daily SSH data to monthly means.
- */
+ 
 export function aggregateSSHToMonthly(
-  data: SSHRow[]
+  data: SeaLevelRow[]
 ): Map<string, number> {
   const groups = new Map<string, number[]>();
 
   for (const row of data) {
-    const [yearStr, monthStr] = row.date.split('-');
+    const [yearStr, monthStr] = row.ate.split('-');
     const key = `${yearStr}-${monthStr}`;
     const arr = groups.get(key) ?? [];
     arr.push(row.ssh);
@@ -125,7 +125,7 @@ export function aggregateSSHToMonthly(
   }
   return monthlyMeans;
 }
-
+*/
 // ============================================================
 // PPI PRICE LOOKUP (fuel price calibration by year)
 // ============================================================
