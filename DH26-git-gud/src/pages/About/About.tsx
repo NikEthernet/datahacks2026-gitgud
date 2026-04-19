@@ -18,37 +18,37 @@ const teamMembers: TeamMember[] = [
     major: 'Computer Science',
     role: 'Full-Stack Developer',
     bio: 'Likes lizards!',
-    photoUrl: '/assets/team/nik.jpg',
+    photoUrl: '/data/nik.png',
     linkedIn: 'https://www.linkedin.com/in/nikolasespinoza/',
     github: 'https://github.com/NikEthernet',
   },
   {
     name: 'Eric Lu',
-    year: 'Year',
-    major: 'Major',
-    role: 'Role in Project',
+    year: '2028',
+    major: 'Math-Econ',
+    role: 'UI/UX',
     bio: 'Short bio placeholder.',
-    photoUrl: '/assets/team/eric.jpg',
+    photoUrl: '/data/eric.png',
     linkedIn: 'https://linkedin.com/in/placeholder',
     github: 'https://github.com/ericlu2',
   },
   {
-    name: 'Seena [Last Name]',
-    year: 'Year',
-    major: 'Major',
+    name: 'Seena Ghasemi',
+    year: '2029',
+    major: 'Majo',
     role: 'Role in Project',
-    bio: 'Short bio placeholder.',
-    photoUrl: '/assets/team/seena.jpg',
+    bio: 'Likes dogs!',
+    photoUrl: '/data/seena.png',
     linkedIn: 'https://linkedin.com/in/placeholder',
     github: 'https://github.com/SeenaG123',
   },
   {
-    name: 'Catherine [Last Name]',
+    name: 'Catherine Hu',
     year: 'Year',
     major: 'Major',
     role: 'Role in Project',
-    bio: 'Short bio placeholder.',
-    photoUrl: '/assets/team/catherine.jpg',
+    bio: 'likes to sleep!',
+    photoUrl: '/data/catherine.jpg',
     linkedIn: 'https://linkedin.com/in/placeholder',
     github: 'https://github.com/Catinherhat',
   },
@@ -94,9 +94,7 @@ function TeamCard({ member }: TeamCardProps) {
   return (
     <div className="team-card">
       <div className="team-photo-wrapper">
-        <img
-          src={member.photoUrl}
-          alt={member.name}
+        <img src={member.photoUrl} alt={member.name}
           className="team-photo"
           onError={(e) => {
             const target = e.target as HTMLImageElement;
