@@ -13,7 +13,7 @@ import type { TotalEnergyConsumptionRow } from '../types/data';
 export function getStartingBudgetForYear(
   consumptionData: TotalEnergyConsumptionRow[],
   year: number,
-  baseline: number = 2000,        // $2B in millions
+  baseline: number = 10000,        // $2B in millions
   baselineYear: number = 1949,
 ): number {
   const findYear = (y: number): number | null => {

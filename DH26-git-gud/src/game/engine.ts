@@ -15,6 +15,7 @@ import {
   END_MONTH,
   DEMOLITION_COST_RATIO,
 } from './constants';
+import { snapshotState, type AnnualSnapshot } from './dataLogger';
 
 // ============================================================
 // TICK RESULT TYPES
@@ -23,6 +24,7 @@ import {
 export interface TickResult {
   state: GameState;
   log: TickLogEntry[];
+  newAnnualSnapshots?: AnnualSnapshot[];
 }
 
 export interface TickLogEntry {
@@ -47,7 +49,7 @@ export interface TickLogEntry {
  *   1. Advance date
  *   2. Mark completed builds as operational
  *   3. Produce energy / consume fuel
- *   4. Pay maintenance (scaled by age)
+ *   4. Pay maintenance (monthly portion of annual)
  *   5. Check game-over
  */
 export function tick(state: GameState): TickResult {
@@ -100,18 +102,31 @@ export function tick(state: GameState): TickResult {
   return { state: newState, log };
 }
 
+/**
+ * Applies N ticks synchronously. Collects any annual snapshots that
+ * would have fired (when year changes). Used for skip-ahead buttons.
+ */
 export function tickN(state: GameState, count: number): TickResult {
   let current = state;
   const allLogs: TickLogEntry[] = [];
+  const snapshots: AnnualSnapshot[] = [];
 
   for (let i = 0; i < count; i++) {
     if (current.isGameOver) break;
+    const prevYear = current.currentYear;
     const result = tick(current);
     current = result.state;
     allLogs.push(...result.log);
+
+    if (
+      current.currentMonth === 1 &&
+      current.currentYear !== prevYear
+    ) {
+      snapshots.push(snapshotState(current));
+    }
   }
 
-  return { state: current, log: allLogs };
+  return { state: current, log: allLogs, newAnnualSnapshots: snapshots };
 }
 
 // ============================================================
@@ -183,10 +198,6 @@ function calculateMaintenance(state: GameState): number {
 // PLAYER ACTIONS
 // ============================================================
 
-/**
- * Build a new plant. Deducts cost, creates plant in non-operational state.
- * Returns null if invalid (too early, no money, unknown type).
- */
 export function buildPlant(
   state: GameState,
   plantType: PlantType,
@@ -214,9 +225,6 @@ export function buildPlant(
   };
 }
 
-/**
- * Buy fuel at current market price.
- */
 export function buyResource(
   state: GameState,
   resource: ResourceType,
@@ -238,9 +246,6 @@ export function buyResource(
   };
 }
 
-/**
- * Demolish a plant. Costs a percentage of original build cost.
- */
 export function demolishPlant(
   state: GameState,
   plantId: string

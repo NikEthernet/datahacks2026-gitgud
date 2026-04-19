@@ -16,15 +16,6 @@ import {
 import { DEFAULT_TICK_SECONDS } from '../game/constants';
 import { snapshotState, type AnnualSnapshot } from '../game/dataLogger';
 
-export interface UseGameStateResult {
-  state: GameState;
-  log: TickLogEntry[];
-  notifications: GameNotification[];
-  annualSnapshots: AnnualSnapshot[];     // ← add
-  
-  actions: { /* ... */ };
-}
-
 export interface GameNotification {
   id: string;
   type: TickLogEntry['type'];
@@ -36,6 +27,7 @@ export interface UseGameStateResult {
   state: GameState;
   log: TickLogEntry[];
   notifications: GameNotification[];
+  annualSnapshots: AnnualSnapshot[];
   actions: {
     start: () => void;
     pause: () => void;
@@ -44,9 +36,11 @@ export interface UseGameStateResult {
     buyResource: (resource: ResourceType, quantity: number) => boolean;
     demolishPlant: (plantId: string) => boolean;
     setTickSpeed: (secondsPerTick: number) => void;
-    skipMonths: (count: number) => void;   // ← add this
+    skipMonths: (count: number) => void;
   };
 }
+
+const NOTIFICATION_DURATION_MS = 5000;
 
 /**
  * Primary game hook — holds state, runs the tick loop, exposes actions.
@@ -54,15 +48,16 @@ export interface UseGameStateResult {
 export function useGameState(): UseGameStateResult {
   const [state, setState] = useState<GameState>(createInitialState());
   const [log, setLog] = useState<TickLogEntry[]>([]);
+  const [notifications, setNotifications] = useState<GameNotification[]>([]);
+  const [annualSnapshots, setAnnualSnapshots] = useState<AnnualSnapshot[]>([]);
   const tickSpeedRef = useRef(DEFAULT_TICK_SECONDS);
   const intervalRef = useRef<number | null>(null);
-  const [notifications, setNotifications] = useState<GameNotification[]>([]);
-  const NOTIFICATION_DURATION_MS = 5000;
 
   const runTick = useCallback(() => {
     setState((current) => {
       const result = tick(current);
       setLog((prevLog) => [...prevLog.slice(-50), ...result.log]);
+
       // Push new log entries as notifications
       if (result.log.length > 0) {
         setNotifications((prev) => [
@@ -75,6 +70,15 @@ export function useGameState(): UseGameStateResult {
           })),
         ]);
       }
+
+      // Capture annual snapshot every January (when year changes)
+      if (
+        result.state.currentMonth === 1 &&
+        result.state.currentYear !== current.currentYear
+      ) {
+        setAnnualSnapshots((prev) => [...prev, snapshotState(result.state)]);
+      }
+
       return result.state;
     });
   }, []);
@@ -83,6 +87,7 @@ export function useGameState(): UseGameStateResult {
     setState((current) => {
       const result = tickN(current, count);
       setLog((prevLog) => [...prevLog.slice(-50), ...result.log]);
+
       if (result.log.length > 0) {
         setNotifications((prev) => [
           ...prev,
@@ -94,11 +99,16 @@ export function useGameState(): UseGameStateResult {
           })),
         ]);
       }
+
+      if (result.newAnnualSnapshots && result.newAnnualSnapshots.length > 0) {
+        setAnnualSnapshots((prev) => [...prev, ...result.newAnnualSnapshots!]);
+      }
+
       return { ...result.state, isPaused: current.isPaused };
     });
   }, []);
 
-  // Auto-remove notifications after they expire
+  // Auto-remove the oldest notification after NOTIFICATION_DURATION_MS
   useEffect(() => {
     if (notifications.length === 0) return;
     const oldestAge = Date.now() - notifications[0].createdAt;
@@ -109,6 +119,7 @@ export function useGameState(): UseGameStateResult {
     return () => window.clearTimeout(timeout);
   }, [notifications]);
 
+  // Run the tick loop when unpaused
   useEffect(() => {
     if (state.isPaused || state.isGameOver) {
       if (intervalRef.current !== null) {
@@ -140,10 +151,11 @@ export function useGameState(): UseGameStateResult {
   }, []);
 
   const reset = useCallback((config?: InitialStateConfig) => {
-  setState(createInitialState(config));
-  setLog([]);
-  setNotifications([]);
-}, []);
+    setState(createInitialState(config));
+    setLog([]);
+    setNotifications([]);
+    setAnnualSnapshots([]);
+  }, []);
 
   const buildPlant = useCallback(
     (type: PlantType, stateCode: string): boolean => {
@@ -198,6 +210,7 @@ export function useGameState(): UseGameStateResult {
     state,
     log,
     notifications,
+    annualSnapshots,
     actions: {
       start,
       pause,
@@ -206,7 +219,7 @@ export function useGameState(): UseGameStateResult {
       buyResource,
       demolishPlant,
       setTickSpeed,
-      skipMonths
+      skipMonths,
     },
   };
 }
