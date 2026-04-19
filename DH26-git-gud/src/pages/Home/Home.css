@@ -1,0 +1,147 @@
+.home {
+  color: #0d1b2a;
+}
+
+/* ============ HERO ============ */
+.hero {
+  min-height: 70vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  background: linear-gradient(
+    135deg,
+    #0d1b2a 0%,
+    #1b263b 50%,
+    #415a77 100%
+  );
+  color: #e0e1dd;
+  border-radius: 8px;
+  margin-bottom: 4rem;
+}
+
+.hero-content {
+  max-width: 900px;
+  text-align: center;
+}
+
+.hero-title {
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-weight: 800;
+  line-height: 1.1;
+  margin-bottom: 1.5rem;
+}
+
+.hero-title .accent {
+  color: #f9a03f;
+}
+
+.hero-tagline {
+  font-size: 1.25rem;
+  line-height: 1.6;
+  color: #c9d4de;
+  margin-bottom: 2.5rem;
+}
+
+.hero-cta {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.btn {
+  display: inline-block;
+  padding: 0.85rem 2rem;
+  border-radius: 6px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+}
+
+.btn-primary {
+  background-color: #f9a03f;
+  color: #0d1b2a;
+}
+
+.btn-secondary {
+  background-color: transparent;
+  color: #e0e1dd;
+  border: 2px solid #e0e1dd;
+}
+
+/* ============ FEATURES ============ */
+.features {
+  padding: 2rem 1rem 4rem;
+}
+
+.section-title {
+  text-align: center;
+  font-size: 2rem;
+  margin-bottom: 3rem;
+  color: #0d1b2a;
+}
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.5rem;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.feature-card {
+  padding: 2rem;
+  background-color: #ffffff;
+  border-radius: 8px;
+  border: 1px solid #e0e1dd;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.feature-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(13, 27, 42, 0.1);
+}
+
+.feature-icon {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+}
+
+.feature-card h3 {
+  margin: 0 0 0.75rem;
+  color: #0d1b2a;
+}
+
+.feature-card p {
+  color: #415a77;
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* ============ DATA CALLOUT ============ */
+.data-callout {
+  text-align: center;
+  padding: 4rem 2rem;
+  background-color: #e0e1dd;
+  border-radius: 8px;
+  max-width: 900px;
+  margin: 0 auto 4rem;
+}
+
+.data-callout h2 {
+  margin: 0 0 1rem;
+  color: #0d1b2a;
+}
+
+.data-callout p {
+  color: #415a77;
+  line-height: 1.7;
+  max-width: 700px;
+  margin: 0 auto;
+}
