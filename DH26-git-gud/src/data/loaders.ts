@@ -114,14 +114,15 @@ export async function loadTotalEnergyConsumption(): Promise<
       skipEmptyLines: true,
       complete: (results) => {
         const rows: TotalEnergyConsumptionRow[] = results.data
-          .filter((r) => r.period && r.value)
-          .map((r) => ({
-            year: Number(r.period),
-            msn: String(r.msn),
-            description: String(r.seriesDescription),
-            value: Number(r.value),
-            unit: String(r.unit),
-          }));
+        .filter((r) => r.period && r.value)
+        .map((r) => ({
+        year: Number(r.period),
+        msn: String(r.msn),
+        description: String(r.seriesDescription),
+        value: Number(r.value),
+        unit: String(r.unit),
+      }))
+        .sort((a, b) => a.year - b.year);  // ← add this line
         resolve(wrapDataset(rows, 'energy_data_total_updated.csv'));
       },
       error: reject,
