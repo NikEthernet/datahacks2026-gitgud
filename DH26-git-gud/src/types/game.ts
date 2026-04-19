@@ -2,9 +2,6 @@
 // PLANT TYPES
 // ============================================================
 
-/**
- * All supported energy generation types for the game.
- */
 export type PlantType =
   | 'coal'
   | 'natural_gas'
@@ -14,97 +11,114 @@ export type PlantType =
   | 'wind'
   | 'solar';
 
+// ============================================================
+// RESOURCES / FUELS
+// ============================================================
+
+export type ResourceType =
+  | 'coal'
+  | 'natural_gas'
+  | 'petroleum'
+  | 'uranium';
+
+export type ResourceInventory = Record<ResourceType, number>;
+
+export type ResourcePrices = Record<ResourceType, number>;
+
+export interface FuelRequirement {
+  resource: ResourceType;
+  unitsPerMWh: number;
+}
+
+// ============================================================
+// CAPACITY FACTOR
+// ============================================================
+
 /**
- * Static definition of a plant type — costs, output, emissions.
- * Calibrated against EIA historical data.
- *
- * Note: energyPerMonth is the core production rate. CSVs typically
- * report annual production, so when deriving these values from CSVs,
- * divide the annual figure by 12.
+ * Monthly capacity multipliers. Index 0 = January, 11 = December.
  */
+export type SeasonalCurve = readonly [
+  number, number, number, number,
+  number, number, number, number,
+  number, number, number, number
+];
+
+// ============================================================
+// PLANT DEFINITION
+// ============================================================
+
 export interface PlantDefinition {
   type: PlantType;
   displayName: string;
   description: string;
-  buildCost: number;           // USD millions
-  maintenanceCost: number;     // USD millions per year
-  energyPerMonth: number;      // MWh produced per month (annual / 12)
-  co2PerMWh: number;           // tons of CO2 per MWh produced
-  buildTimeYears: number;      // years to construct before operational
-  availableFromYear: number;   // first year tech was viable in the US
-  iconPath: string;            // path to icon asset
+  buildCost: number;
+  maintenanceCost: number;
+  energyPerMonth: number;
+  baseCapacityFactor: number;
+  seasonalCurve: SeasonalCurve;
+  co2PerMWh: number;
+  buildTimeYears: number;
+  availableFromYear: number;
+  iconPath: string;
+  fuelRequirement: FuelRequirement | null;
 }
 
 /**
  * A single built plant instance placed on the map.
  */
 export interface Plant {
-  id: string;                  // UUID
+  id: string;
   type: PlantType;
-  stateCode: string;           // 2-letter US state code (e.g. "CA")
+  stateCode: string;
   yearBuilt: number;
-  monthBuilt: number;          // 1-12, since ticks are monthly
+  monthBuilt: number;
   yearDecommissioned: number | null;
-  operational: boolean;        // false during build period
+  operational: boolean;
 }
 
 // ============================================================
 // HISTORICAL EVENTS
 // ============================================================
 
-/**
- * Impact a historical event has on game state.
- * All fields optional — an event may affect one or many things.
- */
 export interface EventImpact {
-  demandMultiplier?: number;        // multiplies current energy demand
-  costMultiplier?: Partial<Record<PlantType, number>>;  // per-plant-type cost changes
-  publicSupportDelta?: number;      // -100 to +100
-  availablePlantTypes?: PlantType[]; // newly unlocked plant types
-  bannedPlantTypes?: PlantType[];   // temporarily disallowed
-  durationMonths?: number;           // how long the effect lasts (in game months)
+  demandMultiplier?: number;
+  costMultiplier?: Partial<Record<PlantType, number>>;
+  publicSupportDelta?: number;
+  availablePlantTypes?: PlantType[];
+  bannedPlantTypes?: PlantType[];
+  durationMonths?: number;
 }
 
 export interface HistoricalEvent {
   id: string;
   year: number;
-  month: number;               // 1-12, for finer temporal placement
+  month: number;
   title: string;
-  description: string;         // narrative shown in the event modal
+  description: string;
   impact: EventImpact;
-  imagePath?: string;          // optional image for the modal
+  imagePath?: string;
 }
 
 // ============================================================
-// GAME METRICS
+// GAME METRICS & STATE
 // ============================================================
 
-/**
- * The player's running statistics, tracked across the full playthrough.
- * Every tick (month), some of these update based on active plants and events.
- */
 export interface GameMetrics {
-  totalEnergyProduced: number;  // cumulative MWh since game start
-  totalCO2Emitted: number;      // cumulative tons of CO2
-  currentDemandMet: number;     // 0-1, fraction of current demand met this tick
-  publicSupport: number;        // 0-100
+  totalEnergyProduced: number;
+  totalCO2Emitted: number;
+  currentDemandMet: number;
+  publicSupport: number;
 }
 
-// ============================================================
-// GAME STATE
-// ============================================================
-
-/**
- * The complete game state. Treat as immutable —
- * produce new state objects on update rather than mutating.
- */
 export interface GameState {
-  currentYear: number;          // 1949 - 2025
-  currentMonth: number;         // 1-12
-  money: number;                // USD millions
+  currentYear: number;
+  currentMonth: number;
+  money: number;
+  resources: ResourceInventory;
+  resourcePrices: ResourcePrices;
   plants: Plant[];
   metrics: GameMetrics;
-  activeEvents: HistoricalEvent[];  // events currently affecting gameplay
+  activeEvents: HistoricalEvent[];
   isGameOver: boolean;
   isPaused: boolean;
 }
@@ -113,20 +127,9 @@ export interface GameState {
 // SCORING (COMPARISON-BASED)
 // ============================================================
 
-/**
- * A single comparative metric: the player's value vs. the real
- * historical U.S. value for the same endpoint year.
- *
- * `delta` and `percentDifference` are derived:
- *   delta = playerValue - realValue
- *   percentDifference = (delta / realValue) * 100
- *
- * `betterThanReality` interprets the direction: for CO2, lower is better;
- * for energy production, matching demand is better than over/under.
- */
 export interface ComparisonMetric {
-  label: string;                 // e.g. "Cumulative CO₂ Emissions"
-  unit: string;                  // e.g. "million tons", "mm", "°C"
+  label: string;
+  unit: string;
   playerValue: number;
   realValue: number;
   delta: number;
@@ -134,16 +137,12 @@ export interface ComparisonMetric {
   betterThanReality: boolean;
 }
 
-/**
- * End-of-game results, comparing the player's performance to the
- * actual historical U.S. record across multiple dimensions.
- */
 export interface GameScore {
   finalYear: number;
   finalMonth: number;
-  energyMetrics: ComparisonMetric[];      // production, demand satisfaction
-  emissionMetrics: ComparisonMetric[];     // CO2, other greenhouse gases
-  oceanicMetrics: ComparisonMetric[];      // sea level, temperature, pH, etc.
-  economicMetrics: ComparisonMetric[];     // final money, total spend
-  summary: string;                          // generated narrative of results
+  energyMetrics: ComparisonMetric[];
+  emissionMetrics: ComparisonMetric[];
+  oceanicMetrics: ComparisonMetric[];
+  economicMetrics: ComparisonMetric[];
+  summary: string;
 }
