@@ -5,9 +5,9 @@ import type {
   SolarLCOERow,
   PPIRow,
   SolarConsumptionRow,
-  SSHRow,
   CO2EmissionsBySourceRow,
   LCOETrendRow,
+  SeaLevelRow,
   LoadedDataset,
 } from '../types/data';
 
@@ -251,33 +251,6 @@ export async function loadSolarConsumption(): Promise<
   });
 }
 
-// ============================================================
-// SEA SURFACE HEIGHT LOADER
-// ============================================================
-
-export async function loadSSH(): Promise<LoadedDataset<SSHRow>> {
-  const text = await fetchCSV('Specific_Location_SSH_Real.csv');
-
-  return new Promise((resolve, reject) => {
-    Papa.parse<Record<string, string>>(text, {
-      header: true,
-      dynamicTyping: true,
-      skipEmptyLines: true,
-      complete: (results) => {
-        const rows: SSHRow[] = results.data
-          .filter((r) => r.time)
-          .map((r) => ({
-            date: String(r.time),
-            lat: Number(r.lat),
-            lon: Number(r.lon),
-            ssh: Number(r.ssh),
-          }));
-        resolve(wrapDataset(rows, 'Specific_Location_SSH_Real.csv'));
-      },
-      error: reject,
-    });
-  });
-}
 
 // ============================================================
 // CO2 EMISSIONS BY SOURCE LOADER
@@ -371,7 +344,73 @@ export async function loadLCOETrends(): Promise<LoadedDataset<LCOETrendRow>> {
     });
   });
 }
+//SEA LEVEL 
+export async function loadSeaLevel(): Promise<LoadedDataset<SeaLevelRow>> {
+  const [csvA, csvB] = await Promise.all([
+    fetchCSV('Cleaned_Sea_Level_Variation.csv'),
+    fetchCSV('Sea_Level_Rise_Formatted.csv'),
+  ]);
 
+  // --- Sum ssh per year from Cleaned_Sea_Level_Variation.csv ---
+  // "Month" column format: "1993-01"
+  const sshByYear = new Map<number, number>();
+
+  await new Promise<void>((resolve, reject) => {
+    Papa.parse<Record<string, string>>(csvA, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (results) => {
+        for (const r of results.data) {
+          const year = parseInt((r['Month'] ?? '').slice(0, 4), 10);
+          const ssh = parseFloat(r['ssh']);
+          if (isNaN(year) || isNaN(ssh)) continue;
+          sshByYear.set(year, (sshByYear.get(year) ?? 0) + ssh);
+        }
+        resolve();
+      },
+      error: reject,
+    });
+  });
+
+  // --- Average Monthly_MSL per year from Sea_Level_Rise_Formatted.csv ---
+  // "Date" column format: "1993.0417" (decimal year)
+  const mslByYear = new Map<number, number[]>();
+
+  await new Promise<void>((resolve, reject) => {
+    Papa.parse<Record<string, string>>(csvB, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (results) => {
+        for (const r of results.data) {
+          const year = parseInt((r['Date'] ?? '').split('.')[0], 10);
+          const msl = parseFloat(r['Monthly_MSL']);
+          if (isNaN(year) || isNaN(msl)) continue;
+          if (!mslByYear.has(year)) mslByYear.set(year, []);
+          mslByYear.get(year)!.push(msl);
+        }
+        resolve();
+      },
+      error: reject,
+    });
+  });
+
+  // --- Merge on year — only keep years present in BOTH datasets ---
+  const rows: SeaLevelRow[] = [];
+  for (const [year, totalSSH] of sshByYear.entries()) {
+    const mslValues = mslByYear.get(year);
+    if (!mslValues || mslValues.length === 0) continue;
+    const meanMSL = mslValues.reduce((a, b) => a + b, 0) / mslValues.length;
+    rows.push({ year, totalSSH, meanMSL });
+  }
+  rows.sort((a, b) => a.year - b.year);
+
+  return {
+    data: rows,
+    loadedAt: new Date(),
+    rowCount: rows.length,
+    sourceFile: 'Cleaned_Sea_Level_Variation.csv + Sea_Level_Rise_Formatted.csv',
+  };
+}
 // ============================================================
 // UTILITIES
 // ============================================================
